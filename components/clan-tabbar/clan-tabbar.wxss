@@ -1,0 +1,37 @@
+.clan-tabbar {
+  display: flex;
+  background: rgba(255, 249, 240, 0.96);
+  border-top: 2rpx solid rgba(193, 154, 75, 0.45);
+  padding-bottom: env(safe-area-inset-bottom);
+  flex-shrink: 0;
+}
+
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12rpx 0 10rpx;
+  color: #8A7A64;
+}
+
+.tab-item.active {
+  color: #C41E1E;
+}
+
+.tab-seal {
+  width: 44rpx;
+  height: 44rpx;
+  line-height: 44rpx;
+  text-align: center;
+  font-size: 22rpx;
+  font-weight: 700;
+  border: 2rpx solid currentColor;
+  border-radius: 8rpx;
+}
+
+.tab-text {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  letter-spacing: 1rpx;
+}

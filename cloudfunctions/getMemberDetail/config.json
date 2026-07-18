@@ -1,0 +1,7 @@
+{
+  "permissions": { "openapi": [] },
+  "desc": "获取成员详情，支持显示婚配信息",
+  "envVariables": {},
+  "timeout": 60,
+  "memorySize": 256
+}

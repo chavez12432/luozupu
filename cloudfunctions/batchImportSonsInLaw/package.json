@@ -1,0 +1,9 @@
+{
+  "name": "batchImportSonsInLaw",
+  "version": "1.0.0",
+  "description": "批量导入女婿数据",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

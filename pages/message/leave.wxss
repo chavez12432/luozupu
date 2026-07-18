@@ -1,0 +1,78 @@
+.page {
+  min-height: 100vh;
+  background: #f5f0e8;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+}
+
+.title {
+  font-size: 34rpx;
+  font-weight: 600;
+  text-align: center;
+  color: #333;
+}
+
+.sub {
+  margin-top: 12rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #8B4513;
+}
+
+.desc {
+  margin: 20rpx 0 28rpx;
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.7;
+}
+
+.label {
+  display: block;
+  font-size: 26rpx;
+  color: #8B4513;
+  margin: 16rpx 0 8rpx;
+}
+
+.input {
+  height: 80rpx;
+  padding: 0 20rpx;
+  border: 2rpx solid #e8ddd0;
+  border-radius: 10rpx;
+  background: #faf8f5;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 240rpx;
+  padding: 16rpx 20rpx;
+  border: 2rpx solid #e8ddd0;
+  border-radius: 10rpx;
+  background: #faf8f5;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.error {
+  margin-top: 16rpx;
+  color: #c0392b;
+  font-size: 26rpx;
+}
+
+.btn {
+  margin-top: 36rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: 44rpx;
+  background: linear-gradient(135deg, #8B4513, #A0522D);
+  color: #fff;
+  font-size: 30rpx;
+}

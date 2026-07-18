@@ -1,0 +1,34 @@
+<view class="page">
+  <view class="card">
+    <view class="title">修改登录绑定</view>
+    <view class="desc">可更新登录手机号与微信号。手机号用于账号唯一绑定；微信号用于资料展示与联系。</view>
+
+    <view class="block">
+      <text class="label">当前手机号</text>
+      <text class="value">{{phoneMasked || '未绑定'}}</text>
+
+      <block wx:if="{{!isLocal}}">
+        <button
+          class="btn primary"
+          open-type="getPhoneNumber|agreePrivacyAuthorization"
+          bindgetphonenumber="onGetPhoneNumber"
+          loading="{{loadingPhone}}"
+          disabled="{{loadingPhone}}"
+        >微信一键更换手机号</button>
+        <view class="hint">点击后请在弹窗中允许获取手机号</view>
+      </block>
+
+      <text class="label" style="margin-top: 24rpx;">{{isLocal ? '新手机号（本地调试）' : '或手动填写新手机号'}}</text>
+      <input class="input" type="number" maxlength="11" placeholder="输入新手机号" value="{{phone}}" bindinput="onPhoneInput" />
+      <view class="btn primary" bindtap="submitPhoneManual">保存手机号</view>
+    </view>
+
+    <view class="block">
+      <text class="label">微信号</text>
+      <input class="input" placeholder="请输入微信号" value="{{wechatId}}" bindinput="onWechatInput" />
+      <view class="btn primary" bindtap="submitWechat">保存微信号</view>
+    </view>
+
+    <view wx:if="{{error}}" class="error">{{error}}</view>
+  </view>
+</view>

@@ -1,0 +1,9 @@
+{
+  "name": "manageWives",
+  "version": "1.0.0",
+  "description": "媳妇管理",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

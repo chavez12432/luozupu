@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "人工申诉",
+  "usingComponents": {
+    "dev-footer": "/components/dev-footer/dev-footer"
+  }
+}

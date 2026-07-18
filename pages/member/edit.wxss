@@ -1,0 +1,124 @@
+.page {
+  height: 100vh;
+  background: #f5f0e8;
+  box-sizing: border-box;
+}
+
+.card {
+  margin: 24rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+  padding-bottom: 80rpx;
+}
+
+.section-title {
+  margin: 28rpx 0 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #8B4513;
+}
+
+.label {
+  display: block;
+  font-size: 26rpx;
+  color: #8B4513;
+  margin: 16rpx 0 8rpx;
+}
+
+.input, .picker {
+  height: 76rpx;
+  line-height: 76rpx;
+  padding: 0 20rpx;
+  border: 2rpx solid #e8ddd0;
+  border-radius: 10rpx;
+  background: #faf8f5;
+  font-size: 28rpx;
+  margin-bottom: 12rpx;
+  box-sizing: border-box;
+}
+
+.row3 {
+  display: flex;
+  gap: 12rpx;
+}
+
+.flex {
+  flex: 1;
+  min-width: 0;
+}
+
+.preview {
+  background: #faf3eb;
+  border-radius: 10rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 12rpx;
+}
+
+.preview text {
+  display: block;
+  font-size: 24rpx;
+  color: #666;
+  line-height: 1.6;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 160rpx;
+  padding: 16rpx 20rpx;
+  border: 2rpx solid #e8ddd0;
+  border-radius: 10rpx;
+  background: #faf8f5;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.multi-item {
+  border: 2rpx solid #f0e6d8;
+  border-radius: 12rpx;
+  padding: 16rpx;
+  margin-bottom: 16rpx;
+  background: #fffcf8;
+}
+
+.multi-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 24rpx;
+  color: #666;
+  margin-bottom: 8rpx;
+}
+
+.del {
+  color: #a94442;
+}
+
+.add-btn {
+  text-align: center;
+  color: #8B4513;
+  font-size: 28rpx;
+  padding: 16rpx;
+  border: 2rpx dashed #d4b896;
+  border-radius: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.link-btn {
+  color: #8B4513;
+  font-size: 26rpx;
+  padding: 12rpx 0 20rpx;
+}
+
+.btn {
+  margin-top: 40rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #8B4513, #A0522D);
+  color: #fff;
+}

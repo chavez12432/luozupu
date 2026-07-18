@@ -1,0 +1,136 @@
+/* 高洲罗氏 · 全局主题（源自 logo.jpg） */
+page {
+  --color-cinnabar: #C41E1E;
+  --color-cinnabar-deep: #9B1515;
+  --color-bronze: #C19A4B;
+  --color-bronze-soft: #D4B56A;
+  --color-paper: #F7E8D0;
+  --color-paper-card: #FFF9F0;
+  --color-paper-deep: #E8D4B5;
+  --color-ink: #2C2416;
+  --color-ink-soft: #5C4E3A;
+  --color-ink-mute: #8A7A64;
+  --color-border: rgba(193, 154, 75, 0.45);
+  --color-shadow: rgba(44, 36, 22, 0.12);
+
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "SimSun", serif;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+/* 宣纸感底纹（轻量） */
+.paper-bg {
+  background-color: var(--color-paper);
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(193, 154, 75, 0.08), transparent 55%),
+    radial-gradient(ellipse at 80% 100%, rgba(196, 30, 30, 0.05), transparent 50%);
+}
+
+/* 古籍卡片 */
+.clan-card {
+  background: var(--color-paper-card);
+  border: 2rpx solid var(--color-border);
+  border-radius: 16rpx;
+  box-shadow: 0 8rpx 24rpx var(--color-shadow);
+  position: relative;
+}
+
+.clan-card::before {
+  content: '';
+  position: absolute;
+  left: 12rpx;
+  right: 12rpx;
+  top: 12rpx;
+  bottom: 12rpx;
+  border: 1rpx solid rgba(193, 154, 75, 0.22);
+  border-radius: 10rpx;
+  pointer-events: none;
+}
+
+/* 朱砂主按钮 */
+.btn-cinnabar {
+  background: linear-gradient(180deg, #D42A2A 0%, #C41E1E 55%, #9B1515 100%);
+  color: #fff;
+  border-radius: 999rpx;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 4rpx;
+  box-shadow: 0 8rpx 20rpx rgba(196, 30, 30, 0.28);
+}
+
+.btn-cinnabar:active {
+  opacity: 0.92;
+  transform: scale(0.99);
+}
+
+/* 描金幽灵按钮 */
+.btn-bronze {
+  background: transparent;
+  color: var(--color-cinnabar);
+  border: 2rpx solid var(--color-bronze);
+  border-radius: 999rpx;
+  text-align: center;
+  letter-spacing: 2rpx;
+}
+
+/* 章节标题 */
+.section-ink-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--color-ink);
+  letter-spacing: 4rpx;
+  position: relative;
+  padding-left: 20rpx;
+}
+
+.section-ink-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10rpx;
+  bottom: 10rpx;
+  width: 6rpx;
+  background: var(--color-cinnabar);
+  border-radius: 4rpx;
+}
+
+/* 底栏公共 */
+.clan-tabbar {
+  display: flex;
+  background: rgba(255, 249, 240, 0.96);
+  border-top: 2rpx solid var(--color-border);
+  padding-bottom: env(safe-area-inset-bottom);
+  flex-shrink: 0;
+}
+
+.clan-tabbar .tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12rpx 0 10rpx;
+  color: var(--color-ink-mute);
+}
+
+.clan-tabbar .tab-item.active {
+  color: var(--color-cinnabar);
+}
+
+.clan-tabbar .tab-seal {
+  width: 44rpx;
+  height: 44rpx;
+  line-height: 44rpx;
+  text-align: center;
+  font-size: 22rpx;
+  font-weight: 700;
+  border: 2rpx solid currentColor;
+  border-radius: 8rpx;
+}
+
+.clan-tabbar .tab-text {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  letter-spacing: 1rpx;
+}

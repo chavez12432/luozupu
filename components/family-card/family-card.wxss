@@ -1,0 +1,13 @@
+.family-card-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #2C2416;
+  letter-spacing: 4rpx;
+  margin-bottom: 12rpx;
+}
+
+.family-card-desc {
+  font-size: 26rpx;
+  color: #8A7A64;
+  line-height: 1.6;
+}

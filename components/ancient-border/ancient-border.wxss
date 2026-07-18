@@ -1,0 +1,26 @@
+.ancient-border {
+  position: relative;
+  background: #FFF9F0;
+  border: 2rpx solid rgba(193, 154, 75, 0.5);
+  border-radius: 16rpx;
+  box-shadow: 0 10rpx 28rpx rgba(44, 36, 22, 0.1);
+}
+
+.inner {
+  position: relative;
+  z-index: 1;
+}
+
+.corner {
+  position: absolute;
+  width: 28rpx;
+  height: 28rpx;
+  border-color: #C41E1E;
+  border-style: solid;
+  z-index: 2;
+}
+
+.tl { left: 10rpx; top: 10rpx; border-width: 3rpx 0 0 3rpx; }
+.tr { right: 10rpx; top: 10rpx; border-width: 3rpx 3rpx 0 0; }
+.bl { left: 10rpx; bottom: 10rpx; border-width: 0 0 3rpx 3rpx; }
+.br { right: 10rpx; bottom: 10rpx; border-width: 0 3rpx 3rpx 0; }

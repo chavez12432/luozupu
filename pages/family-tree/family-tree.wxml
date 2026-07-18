@@ -1,0 +1,74 @@
+<!--pages/family-tree/family-tree.wxml-->
+<view class="container">
+  <!-- 四堂入口 -->
+  <block wx:if="{{mode === 'hub'}}">
+    <view class="header">
+      <image class="header-logo" src="/images/logo.jpg" mode="aspectFit" />
+      <view class="header-title">家族谱树</view>
+      <view class="header-sub">四堂世系图 · 血脉相承</view>
+    </view>
+
+    <view class="hub-body">
+      <view class="loading" wx:if="{{loading}}">加载中...</view>
+      <view class="hall-grid" wx:else>
+        <view
+          wx:for="{{halls}}"
+          wx:key="branch"
+          class="hall-card"
+          data-branch="{{item.branch}}"
+          bindtap="openHall"
+        >
+          <view class="hall-name">{{item.branch}}</view>
+          <view class="hall-meta">{{item.minGen}}–{{item.maxGen}}世</view>
+          <view class="hall-count">{{item.total}} 人</view>
+          <view class="hall-action">查看世系图 →</view>
+        </view>
+      </view>
+      <view class="hub-tip">
+        说明：无父可考者标「断」，与同世其他人并列，表示尚未与上一世续上。
+      </view>
+    </view>
+  </block>
+
+  <!-- 单堂世系图 -->
+  <block wx:else>
+    <view class="chart-header">
+      <view class="chart-title">{{currentBranch}}世系图</view>
+      <view class="chart-stats" wx:if="{{stats}}">
+        {{stats.total}}人 · {{stats.minGen}}–{{stats.maxGen}}世
+        <text wx:if="{{stats.brokenRoots}}"> · 断代支{{stats.brokenRoots}}</text>
+      </view>
+      <view class="chart-tools">
+        <view class="tool-btn" bindtap="zoomOut">缩小</view>
+        <view class="tool-scale">{{scaleLabel}}</view>
+        <view class="tool-btn" bindtap="zoomIn">放大</view>
+        <view class="tool-btn" bindtap="backToHub">返回四堂</view>
+      </view>
+    </view>
+
+    <view class="loading chart-loading" wx:if="{{loading}}">绘制中...</view>
+
+    <scroll-view
+      wx:else
+      scroll-x
+      scroll-y
+      class="chart-scroll"
+      enhanced
+      show-scrollbar
+    >
+      <view
+        class="chart-stage"
+        style="width:{{displayWidth}}px;height:{{displayHeight}}px;"
+      >
+        <canvas
+          type="2d"
+          id="pedigreeCanvas"
+          class="pedigree-canvas"
+          style="width:{{displayWidth}}px;height:{{displayHeight}}px;"
+        ></canvas>
+      </view>
+    </scroll-view>
+  </block>
+
+  <clan-tabbar active="tree"></clan-tabbar>
+</view>

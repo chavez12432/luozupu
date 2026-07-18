@@ -1,0 +1,38 @@
+@import "./auth-common.wxss";
+
+.desc-line {
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.phone-btn {
+  border: none;
+  padding: 0;
+  margin-top: 16rpx;
+  width: 100%;
+}
+
+.phone-btn::after {
+  border: none;
+}
+
+.or-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 36rpx 0 24rpx;
+  color: #8A7A64;
+  font-size: 24rpx;
+}
+
+.or-divider::before,
+.or-divider::after {
+  content: '';
+  flex: 1;
+  height: 1rpx;
+  background: rgba(193, 154, 75, 0.45);
+}
+
+.or-divider text {
+  padding: 0 20rpx;
+}

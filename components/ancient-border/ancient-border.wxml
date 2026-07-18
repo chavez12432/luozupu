@@ -1,0 +1,9 @@
+<view class="ancient-border" style="padding: {{padding}};">
+  <view class="inner">
+    <slot></slot>
+  </view>
+  <view class="corner tl"></view>
+  <view class="corner tr"></view>
+  <view class="corner bl"></view>
+  <view class="corner br"></view>
+</view>

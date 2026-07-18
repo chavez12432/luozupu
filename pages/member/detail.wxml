@@ -1,0 +1,311 @@
+<!--pages/member/detail.wxml-->
+<scroll-view scroll-y class="container">
+  <view wx:if="{{loading}}" class="loading">加载中...</view>
+  
+  <view wx:else class="detail-content">
+    <view wx:if="{{member.hasBrokenLineage}}" class="broken-alert">
+      <text class="alert-icon">⚠️</text>
+      <text class="alert-text">历史断层成员</text>
+    </view>
+
+    <!-- 管理权限提示与操作 -->
+    <view wx:if="{{permission.locked}}" class="manage-lock">
+      <text>{{permission.lockReason}}</text>
+    </view>
+
+    <view
+      wx:elif="{{permission.canEdit || permission.canAddChild || permission.canAddSpouse || permission.canDelete}}"
+      class="manage-bar"
+    >
+      <view wx:if="{{permission.canEdit}}" class="manage-btn" bindtap="goEdit">编辑资料</view>
+      <view wx:if="{{permission.canAddChild}}" class="manage-btn" bindtap="goAddChild">添加子女</view>
+      <view wx:if="{{permission.canAddSpouse}}" class="manage-btn" bindtap="goAddSpouse">添加配偶</view>
+      <view wx:if="{{permission.canDelete}}" class="manage-btn danger" bindtap="confirmDelete">删除</view>
+    </view>
+
+    <!-- 家族档案册 · 封面 -->
+    <view class="info-section archive-cover">
+      <view class="archive-seal">{{member.name[0]}}</view>
+      <view class="archive-label">家族档案</view>
+      <view class="header">
+        <text class="name">{{member.name}}</text>
+        <text class="generation">第{{member.generation}}世</text>
+      </view>
+      <view class="tags">
+        <text class="tag branch-{{member.branchCode}}">{{member.branch}}</text>
+        <text class="tag gender">{{member.gender || ''}}</text>
+        <text class="tag era-tag">{{member.isModern ? '今人' : '古人'}}</text>
+      </view>
+    </view>
+
+    <!-- 今人：相片（字段始终显示） -->
+    <view wx:if="{{member.isModern}}" class="section photo-section">
+      <view class="section-title">相片</view>
+      <view class="photo-box" bindtap="choosePhoto">
+        <image wx:if="{{member.photo}}" class="photo-img" src="{{member.photo}}" mode="aspectFill" />
+        <view wx:else class="photo-placeholder">
+          <text>点击上传相片</text>
+          <text class="photo-hint">自动裁为 9:16</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{member.hasBrokenLineage}}" class="section broken-section">
+      <view class="section-title">断层说明</view>
+      <view class="section-content">
+        <text class="broken-desc">{{member.brokenLineageNote || ''}}</text>
+      </view>
+    </view>
+
+    <!-- 生卒（始终显示字段名；空值留空；绝不用「尚在世」） -->
+    <view class="section dates-section">
+      <view class="date-item">
+        <text class="date-label">出生日期</text>
+        <block wx:if="{{member.isModern}}">
+          <text class="date-value">{{member.birthDateLunar}}</text>
+          <text class="date-era" wx:if="{{member.birthDateGregorian}}">公历 {{member.birthDateGregorian}}</text>
+        </block>
+        <block wx:else>
+          <text class="date-value">{{member.birthDate}}</text>
+          <text class="date-era">{{member.birthDateEra}}</text>
+        </block>
+      </view>
+      <view class="date-item">
+        <text class="date-label">逝世日期</text>
+        <block wx:if="{{member.isModern}}">
+          <text class="date-value">{{member.deathDateLunar}}</text>
+          <text class="date-era" wx:if="{{member.deathDateGregorian}}">公历 {{member.deathDateGregorian}}</text>
+        </block>
+        <block wx:else>
+          <text class="date-value">{{member.deathDate}}</text>
+          <text class="date-era">{{member.deathDateEra}}</text>
+        </block>
+      </view>
+      <view class="date-item">
+        <text class="date-label">享年</text>
+        <text class="date-value">{{member.lifespanText}}</text>
+      </view>
+    </view>
+
+    <!-- 古人：荣誉、学历、职位 -->
+    <view class="section location-section" wx:if="{{!member.isModern}}">
+      <view class="location-item">
+        <text class="location-label">荣誉</text>
+        <view class="location-value multi-lines" wx:if="{{member.honorsList && member.honorsList.length}}">
+          <text wx:for="{{member.honorsList}}" wx:key="*this" class="multi-line">{{item}}</text>
+        </view>
+        <text wx:else class="location-value"></text>
+      </view>
+      <view class="location-item">
+        <text class="location-label">学历</text>
+        <text class="location-value">{{member.educationStr}}</text>
+      </view>
+      <view class="location-item">
+        <text class="location-label">职位</text>
+        <text class="location-value">{{member.positionsStr}}</text>
+      </view>
+    </view>
+
+    <!-- 今人：现居地、手机等（始终显示） -->
+    <view class="section location-section" wx:if="{{member.isModern}}">
+      <view class="location-item">
+        <text class="location-label">现居地</text>
+        <text class="location-value">{{member.residence}}</text>
+      </view>
+      <view class="location-item">
+        <text class="location-label">手机号</text>
+        <text class="location-value">{{member.phone}}</text>
+      </view>
+      <view class="location-item">
+        <text class="location-label">微信号</text>
+        <text class="location-value">{{member.wechat}}</text>
+      </view>
+      <view class="location-item">
+        <text class="location-label">学历</text>
+        <view class="location-value multi-lines" wx:if="{{member.educationList && member.educationList.length}}">
+          <text wx:for="{{member.educationList}}" wx:key="display" class="multi-line">{{item.display}}</text>
+        </view>
+        <text wx:elif="{{member.educationStr}}" class="location-value">{{member.educationStr}}</text>
+        <text wx:else class="location-value"></text>
+      </view>
+      <view class="location-item">
+        <text class="location-label">工作单位</text>
+        <view class="location-value multi-lines" wx:if="{{member.workplaceList && member.workplaceList.length}}">
+          <text wx:for="{{member.workplaceList}}" wx:key="*this" class="multi-line">{{item}}</text>
+        </view>
+        <text wx:else class="location-value"></text>
+      </view>
+      <view class="location-item">
+        <text class="location-label">荣誉</text>
+        <view class="location-value multi-lines" wx:if="{{member.honorsList && member.honorsList.length}}">
+          <text wx:for="{{member.honorsList}}" wx:key="*this" class="multi-line">{{item}}</text>
+        </view>
+        <text wx:else class="location-value"></text>
+      </view>
+      <view class="location-item">
+        <text class="location-label">职位</text>
+        <view class="location-value multi-lines" wx:if="{{member.positionsList && member.positionsList.length}}">
+          <text wx:for="{{member.positionsList}}" wx:key="*this" class="multi-line">{{item}}</text>
+        </view>
+        <text wx:elif="{{member.positionsStr}}" class="location-value">{{member.positionsStr}}</text>
+        <text wx:else class="location-value"></text>
+      </view>
+    </view>
+
+    <!-- 父母 -->
+    <view class="section family-section">
+      <view class="family-title">父母</view>
+      <view class="family-row">
+        <text class="family-label">父亲</text>
+        <navigator
+          wx:if="{{member.fatherId}}"
+          open-type="redirect"
+          url="/pages/member/detail?id={{member.fatherId}}"
+          class="family-name clickable"
+          hover-class="link-hover"
+        >{{member.fatherName}}</navigator>
+        <view wx:else class="family-name empty"></view>
+      </view>
+      <view class="family-row">
+        <text class="family-label">母亲</text>
+        <navigator
+          wx:if="{{member.motherWifeId}}"
+          url="/pages/wife-detail/wife-detail?id={{member.motherWifeId}}"
+          class="family-name clickable"
+          hover-class="link-hover"
+        >{{member.motherName}}</navigator>
+        <navigator
+          wx:elif="{{member.motherId}}"
+          open-type="redirect"
+          url="/pages/member/detail?id={{member.motherId}}"
+          class="family-name clickable"
+          hover-class="link-hover"
+        >{{member.motherName}}</navigator>
+        <view wx:else class="family-name empty"></view>
+      </view>
+    </view>
+
+    <!-- 配偶 -->
+    <view class="section family-section">
+      <view class="family-title">配偶</view>
+      <view class="family-row" wx:if="{{member.gender !== '女'}}">
+        <text class="family-label">妻子</text>
+        <view class="family-wives">
+          <block wx:if="{{member.wives && member.wives.length > 0}}">
+            <block wx:for="{{member.wives}}" wx:for-index="wifeIdx" wx:key="linkId">
+              <navigator
+                wx:if="{{item.linkType === 'member'}}"
+                open-type="redirect"
+                url="/pages/member/detail?id={{item.linkId}}"
+                class="family-name clickable"
+                hover-class="link-hover"
+              >
+                <text wx:if="{{item.marriageType && item.marriageType !== '配'}}">{{item.marriageType}} </text>
+                {{item.name}}
+                <text wx:if="{{item.isClanSpouse || item.hometown === '本村'}}" class="clan-tag">（本村）</text>
+              </navigator>
+              <navigator
+                wx:elif="{{item.linkType === 'wife'}}"
+                url="/pages/wife-detail/wife-detail?id={{item.linkId}}"
+                class="family-name clickable"
+                hover-class="link-hover"
+              >
+                <text wx:if="{{item.marriageType && item.marriageType !== '配'}}">{{item.marriageType}} </text>
+                {{item.name}}
+                <text wx:if="{{item.isClanSpouse || item.hometown === '本村'}}" class="clan-tag">（本村）</text>
+              </navigator>
+            </block>
+          </block>
+          <view wx:else class="family-name empty"></view>
+        </view>
+      </view>
+      <view class="family-row" wx:if="{{member.gender === '女'}}">
+        <text class="family-label">丈夫</text>
+        <view class="family-wives">
+          <block wx:if="{{member.husbands && member.husbands.length > 0}}">
+            <navigator
+              wx:for="{{member.husbands}}"
+              wx:key="linkId"
+              open-type="redirect"
+              url="/pages/member/detail?id={{item.linkId}}"
+              class="family-name clickable"
+              hover-class="link-hover"
+            >
+              {{item.name}}
+              <text wx:if="{{item.isClanSpouse}}" class="clan-tag">（本村）</text>
+            </navigator>
+          </block>
+          <navigator
+            wx:elif="{{member.spouseMemberDocId}}"
+            open-type="redirect"
+            url="/pages/member/detail?id={{member.spouseMemberDocId}}"
+            class="family-name clickable"
+            hover-class="link-hover"
+          >{{member.spouseName}}</navigator>
+          <view wx:else class="family-name empty"></view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 子女 -->
+    <view class="section family-section">
+      <view class="family-title">子女</view>
+      <view class="children-container">
+        <block wx:if="{{member.children && member.children.length > 0}}">
+          <view wx:for="{{member.children}}" wx:key="_id" class="child-item">
+            <view class="child-gender {{item.gender === '男' ? 'male' : 'female'}}">
+              {{item.gender === '男' ? '子' : '女'}}
+            </view>
+            <navigator
+              wx:if="{{item._id}}"
+              open-type="redirect"
+              url="/pages/member/detail?id={{item._id}}"
+              class="child-name clickable"
+              hover-class="link-hover"
+            >{{item.name}}</navigator>
+            <view wx:else class="child-name empty"></view>
+            <view class="child-generation">第{{item.generation}}世</view>
+          </view>
+        </block>
+        <view wx:else class="children-empty">
+          <text></text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 墓葬处：放在备注前展示（古人） -->
+    <view class="section location-section" wx:if="{{!member.isModern}}">
+      <view class="location-item">
+        <text class="location-label">墓葬处</text>
+        <text class="location-value">{{member.burialPlace}}</text>
+      </view>
+    </view>
+
+    <!-- 备注（始终显示） -->
+    <view class="section remark-section">
+      <view class="remark-title">备注</view>
+      <view class="remark-content">
+        <text>{{member.remark}}</text>
+      </view>
+    </view>
+
+    <view class="action-buttons">
+      <button wx:if="{{member.hasBrokenLineage}}" class="btn btn-clue" bindtap="submitClue">
+        提供寻亲线索
+      </button>
+      <button class="btn btn-back" bindtap="goBack">返回</button>
+    </view>
+
+    <dev-footer></dev-footer>
+  </view>
+</scroll-view>
+
+<!-- 仅裁切相片时挂载 canvas，避免原生组件拦截页面点击 -->
+<canvas
+  wx:if="{{showPhotoCanvas}}"
+  canvas-id="photoCropCanvas"
+  class="photo-crop-canvas"
+  style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
+></canvas>
+
+

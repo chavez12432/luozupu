@@ -1,0 +1,142 @@
+<scroll-view scroll-y class="page">
+  <view class="card">
+    <view class="section-title">基本信息（{{isModern ? '现代人' : '古代人'}}）</view>
+
+    <text class="label">姓名</text>
+    <input class="input" value="{{form.name}}" data-field="name" bindinput="onInput" />
+
+    <text class="label">性别</text>
+    <picker mode="selector" range="{{genders}}" value="{{genderIndex}}" bindchange="onGenderChange">
+      <view class="picker">{{genders[genderIndex]}}</view>
+    </picker>
+
+    <!-- 生日：先选历法 -->
+    <view class="section-title">出生日期</view>
+    <text class="label">历法</text>
+    <picker mode="selector" range="{{calendarTypes}}" range-key="label" value="{{calendarIndex}}" bindchange="onCalendarChange">
+      <view class="picker">{{calendarTypes[calendarIndex].label}}</view>
+    </picker>
+
+    <block wx:if="{{calendarTypes[calendarIndex].value === 'lunar'}}">
+      <text class="label">农历年 / 月 / 日</text>
+      <view class="row3">
+        <input class="input flex" type="number" placeholder="年" value="{{form.lYear}}" data-field="lYear" bindinput="onBirthInput" />
+        <input class="input flex" type="number" placeholder="月" value="{{form.lMonth}}" data-field="lMonth" bindinput="onBirthInput" />
+        <input class="input flex" type="number" placeholder="日" value="{{form.lDay}}" data-field="lDay" bindinput="onBirthInput" />
+      </view>
+    </block>
+    <block wx:else>
+      <text class="label">公历年 / 月 / 日</text>
+      <view class="row3">
+        <input class="input flex" type="number" placeholder="年" value="{{form.gYear}}" data-field="gYear" bindinput="onBirthInput" />
+        <input class="input flex" type="number" placeholder="月" value="{{form.gMonth}}" data-field="gMonth" bindinput="onBirthInput" />
+        <input class="input flex" type="number" placeholder="日" value="{{form.gDay}}" data-field="gDay" bindinput="onBirthInput" />
+      </view>
+    </block>
+
+    <view class="preview" wx:if="{{birthPreviewLunar || birthPreviewGregorian}}">
+      <text wx:if="{{birthPreviewLunar}}">农历：{{birthPreviewLunar}}</text>
+      <text wx:if="{{birthPreviewGregorian}}">公历：{{birthPreviewGregorian}}</text>
+    </view>
+
+    <!-- 现代人字段 -->
+    <block wx:if="{{isModern}}">
+      <view class="section-title">联系与居住</view>
+      <text class="label">现居地</text>
+      <input class="input" value="{{form.residence}}" data-field="residence" bindinput="onInput" />
+
+      <text class="label">手机号（资料展示）</text>
+      <input class="input" type="number" maxlength="11" value="{{form.phone}}" data-field="phone" bindinput="onInput" />
+
+      <text class="label">微信号（资料展示）</text>
+      <input class="input" value="{{form.wechat}}" data-field="wechat" bindinput="onInput" />
+
+      <view class="link-btn" bindtap="goRebind" wx:if="{{isSelf}}">修改登录手机号 / 微信绑定 →</view>
+
+      <view class="section-title">学历（最多5条）</view>
+      <view wx:for="{{education}}" wx:key="index" class="multi-item">
+        <view class="multi-head">
+          <text>学历 {{index + 1}}</text>
+          <text class="del" data-list="education" data-index="{{index}}" bindtap="removeMulti">删除</text>
+        </view>
+        <input class="input" placeholder="学历/学位" value="{{item.degree}}" data-list="education" data-index="{{index}}" data-key="degree" bindinput="onMultiInput" />
+        <input class="input" placeholder="学校" value="{{item.school}}" data-list="education" data-index="{{index}}" data-key="school" bindinput="onMultiInput" />
+        <input class="input" placeholder="毕业年份（选填）" type="number" value="{{item.year}}" data-list="education" data-index="{{index}}" data-key="year" bindinput="onMultiInput" />
+      </view>
+      <view class="add-btn" wx:if="{{education.length < 5}}" data-list="education" bindtap="addMulti">+ 添加学历</view>
+
+      <view class="section-title">工作单位（最多5条）</view>
+      <view wx:for="{{workplaces}}" wx:key="index" class="multi-item">
+        <view class="multi-head">
+          <text>单位 {{index + 1}}</text>
+          <text class="del" data-list="workplaces" data-index="{{index}}" bindtap="removeMulti">删除</text>
+        </view>
+        <input class="input" placeholder="单位名称" value="{{item.name}}" data-list="workplaces" data-index="{{index}}" data-key="name" bindinput="onMultiInput" />
+        <input class="input" placeholder="职务（选填）" value="{{item.title}}" data-list="workplaces" data-index="{{index}}" data-key="title" bindinput="onMultiInput" />
+      </view>
+      <view class="add-btn" wx:if="{{workplaces.length < 5}}" data-list="workplaces" bindtap="addMulti">+ 添加工作单位</view>
+
+      <view class="section-title">荣誉（最多5条）</view>
+      <view wx:for="{{honors}}" wx:key="index" class="multi-item">
+        <view class="multi-head">
+          <text>荣誉 {{index + 1}}</text>
+          <text class="del" data-list="honors" data-index="{{index}}" bindtap="removeMulti">删除</text>
+        </view>
+        <input class="input" placeholder="荣誉称号" value="{{item.title}}" data-list="honors" data-index="{{index}}" data-key="title" bindinput="onMultiInput" />
+      </view>
+      <view class="add-btn" wx:if="{{honors.length < 5}}" data-list="honors" bindtap="addMulti">+ 添加荣誉</view>
+
+      <view class="section-title">职位（最多5条）</view>
+      <view wx:for="{{positions}}" wx:key="index" class="multi-item">
+        <view class="multi-head">
+          <text>职位 {{index + 1}}</text>
+          <text class="del" data-list="positions" data-index="{{index}}" bindtap="removeMulti">删除</text>
+        </view>
+        <input class="input" placeholder="职位名称" value="{{item.title}}" data-list="positions" data-index="{{index}}" data-key="title" bindinput="onMultiInput" />
+      </view>
+      <view class="add-btn" wx:if="{{positions.length < 5}}" data-list="positions" bindtap="addMulti">+ 添加职位</view>
+    </block>
+
+    <!-- 古代人字段 -->
+    <block wx:else>
+      <view class="section-title">古人信息</view>
+      <text class="label">墓葬处</text>
+      <input class="input" value="{{form.burialPlace}}" data-field="burialPlace" bindinput="onInput" />
+
+      <view class="section-title">荣誉（最多5条）</view>
+      <view wx:for="{{honors}}" wx:key="index" class="multi-item">
+        <view class="multi-head">
+          <text>荣誉 {{index + 1}}</text>
+          <text class="del" data-list="honors" data-index="{{index}}" bindtap="removeMulti">删除</text>
+        </view>
+        <input class="input" placeholder="荣誉" value="{{item.title}}" data-list="honors" data-index="{{index}}" data-key="title" bindinput="onMultiInput" />
+      </view>
+      <view class="add-btn" wx:if="{{honors.length < 5}}" data-list="honors" bindtap="addMulti">+ 添加荣誉</view>
+
+      <view class="section-title">职位（最多5条）</view>
+      <view wx:for="{{positions}}" wx:key="index" class="multi-item">
+        <view class="multi-head">
+          <text>职位 {{index + 1}}</text>
+          <text class="del" data-list="positions" data-index="{{index}}" bindtap="removeMulti">删除</text>
+        </view>
+        <input class="input" placeholder="职位" value="{{item.title}}" data-list="positions" data-index="{{index}}" data-key="title" bindinput="onMultiInput" />
+      </view>
+      <view class="add-btn" wx:if="{{positions.length < 5}}" data-list="positions" bindtap="addMulti">+ 添加职位</view>
+
+      <view class="section-title">学历（最多5条）</view>
+      <view wx:for="{{education}}" wx:key="index" class="multi-item">
+        <view class="multi-head">
+          <text>学历 {{index + 1}}</text>
+          <text class="del" data-list="education" data-index="{{index}}" bindtap="removeMulti">删除</text>
+        </view>
+        <input class="input" placeholder="如：进士、举人" value="{{item.degree}}" data-list="education" data-index="{{index}}" data-key="degree" bindinput="onMultiInput" />
+      </view>
+      <view class="add-btn" wx:if="{{education.length < 5}}" data-list="education" bindtap="addMulti">+ 添加学历</view>
+    </block>
+
+    <text class="label">备注</text>
+    <textarea class="textarea" value="{{form.remark}}" data-field="remark" bindinput="onInput" maxlength="800" />
+
+    <view class="btn primary" bindtap="submit">保存</view>
+  </view>
+</scroll-view>

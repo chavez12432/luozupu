@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>初始化荣誉榜数据</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+    .btn { padding: 12px 24px; margin: 10px 5px; cursor: pointer; background: #667eea; color: white; border: none; border-radius: 5px; font-size: 16px; }
+    .btn:hover { background: #5a6fd6; }
+    .result { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; }
+    h2 { color: #8b4513; }
+    .info { background: #e3f2fd; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <h2>🏆 荣誉榜数据初始化</h2>
+  
+  <div class="info">
+    <strong>注意：</strong>请确保已重新部署 adminApi 云函数后再点击按钮
+  </div>
+  
+  <p>测试链接（直接在浏览器地址栏访问）：</p>
+  <a href="https://luoshi-7g0fx8maef33f709-1420383154.ap-shanghai.app.tcloudbase.com/adminApi?action=listPatriarchs" target="_blank">
+    点击测试族长API
+  </a>
+  
+  <hr>
+  
+  <button class="btn" onclick="initPatriarchs()">1. 初始化族长数据</button>
+  <button class="btn" onclick="syncFromMembers()">2. 同步学历/职位数据</button>
+  <button class="btn" onclick="testApi()" style="background: #4caf50;">测试API</button>
+  <hr>
+  <h3>数据去重</h3>
+  <button class="btn" onclick="dedupeWives()" style="background: #e91e63;">媳妇去重</button>
+  <button class="btn" onclick="dedupeSonsInLaw()" style="background: #9c27b0;">女婿去重</button>
+  
+  <div id="result" class="result">等待操作...</div>
+  
+  <script>
+    const baseUrl = 'https://luoshi-7g0fx8maef33f709-1420383154.ap-shanghai.app.tcloudbase.com';
+    
+    async function testApi() {
+      document.getElementById('result').textContent = '正在测试 API...';
+      try {
+        const res = await fetch(baseUrl + '/adminApi?action=listPatriarchs');
+        const data = await res.json();
+        document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById('result').textContent = '错误: ' + err.message + '\n\n可能原因：\n1. 云函数未部署\n2. HTTP触发器未配置\n3. CORS未配置';
+      }
+    }
+    
+    async function initPatriarchs() {
+      document.getElementById('result').textContent = '正在初始化族长数据...\n';
+      try {
+        const res = await fetch(baseUrl + '/adminApi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'initHonorData', actionType: 'init' })
+        });
+        const data = await res.json();
+        document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById('result').textContent = '错误: ' + err.message;
+      }
+    }
+    
+    async function syncFromMembers() {
+      document.getElementById('result').textContent = '正在同步数据...\n';
+      try {
+        const res = await fetch(baseUrl + '/adminApi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'initHonorData', actionType: 'syncFromMembers' })
+        });
+        const data = await res.json();
+        document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById('result').textContent = '错误: ' + err.message;
+      }
+    }
+    
+    async function dedupeWives() {
+      if (!confirm('确定要删除 wives 表中的重复记录吗？')) return;
+      document.getElementById('result').textContent = '正在执行媳妇去重...\n';
+      try {
+        const res = await fetch(baseUrl + '/adminApi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'dedupeWives' })
+        });
+        const data = await res.json();
+        document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById('result').textContent = '错误: ' + err.message + '\n\n可能原因：云函数未重新部署';
+      }
+    }
+    
+    async function dedupeSonsInLaw() {
+      if (!confirm('确定要删除 sons_in_law 表中的重复记录吗？')) return;
+      document.getElementById('result').textContent = '正在执行女婿去重...\n';
+      try {
+        const res = await fetch(baseUrl + '/adminApi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'dedupeSonsInLaw' })
+        });
+        const data = await res.json();
+        document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById('result').textContent = '错误: ' + err.message + '\n\n可能原因：云函数未重新部署';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<view class="page">
+  <view class="card">
+    <view class="title">向开发人员留言</view>
+    <view class="sub">软件开发人员：罗阳先（明儒堂 35 世）</view>
+    <view class="desc">如需更正、补充族谱资料，或反馈使用问题，请留言说明。开发人员将根据留言协助核实与修改。</view>
+
+    <text class="label">您的姓名</text>
+    <input class="input" value="{{name}}" data-field="name" bindinput="onInput" placeholder="请输入姓名" />
+
+    <text class="label">联系电话</text>
+    <input class="input" type="number" maxlength="11" value="{{phone}}" data-field="phone" bindinput="onInput" placeholder="便于联系您" />
+
+    <text class="label">微信号（选填）</text>
+    <input class="input" value="{{wechat}}" data-field="wechat" bindinput="onInput" placeholder="选填" />
+
+    <text class="label">留言内容</text>
+    <textarea
+      class="textarea"
+      value="{{content}}"
+      data-field="content"
+      bindinput="onInput"
+      maxlength="800"
+      placeholder="请说明需要修改的资料内容、涉及人员姓名等"
+    />
+
+    <view wx:if="{{error}}" class="error">{{error}}</view>
+    <view class="btn" bindtap="submit">提交留言</view>
+  </view>
+</view>

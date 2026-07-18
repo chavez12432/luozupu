@@ -1,0 +1,98 @@
+/* pages/elite/detail.wxss */
+.container {
+  min-height: 100vh;
+  background-color: #faf8f5;
+  padding-bottom: 120rpx;
+}
+
+.header {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  padding: 48rpx 36rpx 40rpx;
+}
+
+.name {
+  font-size: 48rpx;
+  font-weight: bold;
+  letter-spacing: 8rpx;
+}
+
+.meta {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  opacity: 0.92;
+}
+
+.dot {
+  margin: 0 10rpx;
+}
+
+.summary {
+  margin-top: 20rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+.content {
+  padding: 36rpx;
+  height: calc(100vh - 320rpx);
+  box-sizing: border-box;
+}
+
+.section-label {
+  font-size: 28rpx;
+  color: #f5576c;
+  font-weight: bold;
+  margin-bottom: 24rpx;
+  padding-left: 16rpx;
+  border-left: 6rpx solid #f5576c;
+}
+
+.bio {
+  background: white;
+  border-radius: 12rpx;
+  padding: 36rpx 32rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.para {
+  font-size: 30rpx;
+  line-height: 1.9;
+  color: #333;
+  text-align: justify;
+  text-indent: 2em;
+  margin-bottom: 28rpx;
+  white-space: pre-wrap;
+}
+
+.para:last-child {
+  margin-bottom: 0;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  display: flex;
+  justify-content: center;
+  padding: 16rpx;
+  border-top: 1rpx solid #eee;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  color: #667eea;
+}
+
+.nav-icon {
+  font-size: 32rpx;
+  margin-right: 8rpx;
+}
+
+.nav-text {
+  font-size: 26rpx;
+}

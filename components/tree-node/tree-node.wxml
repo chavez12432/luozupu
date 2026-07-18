@@ -1,0 +1,4 @@
+<view class="tree-node {{active ? 'active' : ''}}" bindtap="onTap">
+  <view class="node-gen" wx:if="{{generation}}">第{{generation}}世</view>
+  <view class="node-name">{{name}}</view>
+</view>

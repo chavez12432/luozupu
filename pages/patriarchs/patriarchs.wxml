@@ -1,0 +1,41 @@
+<!--pages/patriarchs/patriarchs.wxml-->
+<view class="container">
+  <view class="header">
+    <view class="header-title">👑 族长表</view>
+    <view class="header-sub">各堂基祖</view>
+  </view>
+
+  <view class="content">
+    <view class="loading" wx:if="{{loading}}">加载中...</view>
+    
+    <view wx:else class="patriarch-list">
+      <view 
+        wx:for="{{patriarchs}}" 
+        wx:key="_id"
+        class="patriarch-item"
+      >
+        <view class="patriarch-icon">👑</view>
+        <view class="patriarch-info">
+          <view class="patriarch-name">{{item.name}}</view>
+          <view class="patriarch-title">{{item.title}}</view>
+          <view class="patriarch-meta">
+            <text class="branch-tag">{{item.branch}}</text>
+            <text class="achievement">{{item.branchTitle}}</text>
+          </view>
+          <view class="patriarch-achievements">{{item.achievements}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="bottom-nav">
+    <view class="nav-item" bindtap="goBack">
+      <view class="nav-icon">←</view>
+      <text class="nav-text">返回</text>
+    </view>
+    <view class="nav-item" bindtap="goToHonor">
+      <view class="nav-icon">🏆</view>
+      <text class="nav-text">荣誉榜</text>
+    </view>
+  </view>
+</view>

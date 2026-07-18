@@ -1,0 +1,9 @@
+{
+  "name": "updateSpouseInfo",
+  "version": "1.0.0",
+  "description": "更新成员婚配信息",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

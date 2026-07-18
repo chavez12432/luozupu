@@ -1,0 +1,90 @@
+.person-card {
+  display: flex;
+  align-items: center;
+  background: #FFF9F0;
+  border: 2rpx solid rgba(193, 154, 75, 0.4);
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 12rpx;
+  box-shadow: 0 6rpx 16rpx rgba(44, 36, 22, 0.08);
+}
+
+.person-card:active {
+  opacity: 0.88;
+}
+
+.avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #D42A2A, #C41E1E);
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 3rpx solid #C19A4B;
+  box-sizing: border-box;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+  margin: 0 16rpx;
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.name {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #2C2416;
+}
+
+.warn {
+  font-size: 20rpx;
+  color: #C41E1E;
+  background: rgba(196, 30, 30, 0.08);
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  border: 1rpx solid rgba(196, 30, 30, 0.25);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 8rpx;
+}
+
+.tag {
+  font-size: 22rpx;
+  color: #5C4E3A;
+  background: rgba(193, 154, 75, 0.12);
+  padding: 4rpx 12rpx;
+  border-radius: 6rpx;
+}
+
+.branch-zhonghe { color: #9B6B1A; background: rgba(193, 154, 75, 0.18); }
+.branch-mingru { color: #C41E1E; background: rgba(196, 30, 30, 0.08); }
+.branch-deyu { color: #5C4E3A; background: rgba(44, 36, 22, 0.06); }
+.branch-zhongshou { color: #9B1515; background: rgba(155, 21, 21, 0.1); }
+
+.sub {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: #8A7A64;
+  display: flex;
+  gap: 16rpx;
+}
+
+.arrow {
+  font-size: 36rpx;
+  color: #C19A4B;
+}

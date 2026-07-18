@@ -1,0 +1,148 @@
+/* 认证流程共用样式 · 新中式 */
+.auth-page {
+  min-height: 100vh;
+  background: #F7E8D0;
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(193, 154, 75, 0.08), transparent 55%),
+    radial-gradient(ellipse at 80% 100%, rgba(196, 30, 30, 0.05), transparent 50%);
+  padding: 48rpx 40rpx 80rpx;
+  box-sizing: border-box;
+}
+
+.auth-card {
+  background: #FFF9F0;
+  border-radius: 20rpx;
+  padding: 40rpx 36rpx;
+  border: 2rpx solid rgba(193, 154, 75, 0.45);
+  box-shadow: 0 10rpx 28rpx rgba(44, 36, 22, 0.1);
+}
+
+.auth-brand {
+  text-align: center;
+  font-size: 28rpx;
+  color: #C41E1E;
+  margin-bottom: 24rpx;
+  letter-spacing: 2rpx;
+}
+
+.auth-title {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: #2C2416;
+  text-align: center;
+  margin-bottom: 20rpx;
+  letter-spacing: 4rpx;
+}
+
+.auth-desc {
+  font-size: 28rpx;
+  color: #5C4E3A;
+  line-height: 1.7;
+  text-align: center;
+  margin-bottom: 40rpx;
+}
+
+.auth-label {
+  display: block;
+  font-size: 26rpx;
+  color: #C41E1E;
+  margin-bottom: 12rpx;
+}
+
+.auth-input {
+  width: 100%;
+  height: 88rpx;
+  padding: 0 24rpx;
+  border: 2rpx solid rgba(193, 154, 75, 0.45);
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  box-sizing: border-box;
+  background: #F7E8D0;
+  margin-bottom: 28rpx;
+  color: #2C2416;
+}
+
+.auth-hint {
+  font-size: 24rpx;
+  color: #8A7A64;
+  margin: -12rpx 0 28rpx;
+}
+
+.auth-btn {
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  font-size: 30rpx;
+  margin-top: 16rpx;
+  letter-spacing: 4rpx;
+}
+
+.auth-btn-primary {
+  background: linear-gradient(180deg, #D42A2A 0%, #C41E1E 55%, #9B1515 100%);
+  color: #fff;
+  box-shadow: 0 8rpx 20rpx rgba(196, 30, 30, 0.28);
+}
+
+.auth-btn-ghost {
+  background: transparent;
+  color: #C41E1E;
+  border: 2rpx solid #C19A4B;
+  margin-top: 24rpx;
+}
+
+.auth-btn-text {
+  background: transparent;
+  color: #8A7A64;
+  font-size: 26rpx;
+  margin-top: 32rpx;
+  letter-spacing: 2rpx;
+}
+
+.auth-btn[disabled] {
+  opacity: 0.5;
+}
+
+.picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 88rpx;
+  padding: 0 24rpx;
+  border: 2rpx solid rgba(193, 154, 75, 0.45);
+  border-radius: 12rpx;
+  background: #F7E8D0;
+  margin-bottom: 28rpx;
+  font-size: 30rpx;
+  color: #2C2416;
+}
+
+.picker-arrow {
+  color: #8A7A64;
+  font-size: 24rpx;
+}
+
+.error-box {
+  background: rgba(196, 30, 30, 0.06);
+  border: 1rpx solid rgba(196, 30, 30, 0.25);
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 28rpx;
+}
+
+.error-text {
+  font-size: 28rpx;
+  color: #C41E1E;
+  line-height: 1.6;
+}
+
+.candidate-tip {
+  font-size: 26rpx;
+  color: #C41E1E;
+  background: rgba(193, 154, 75, 0.12);
+  border: 1rpx solid rgba(193, 154, 75, 0.35);
+  padding: 20rpx 24rpx;
+  border-radius: 12rpx;
+  margin-bottom: 28rpx;
+  line-height: 1.5;
+}

@@ -1,0 +1,38 @@
+<!--pages/honor/index.wxml-->
+<view class="container paper-bg">
+  <view class="header-card">
+    <image class="header-logo" src="/images/logo.jpg" mode="aspectFit" />
+    <view class="header-title">荣誉堂</view>
+    <view class="header-sub">衣冠仕宦 · 乡贤撷英</view>
+  </view>
+
+  <view class="module-section">
+    <view class="module-grid">
+      <view class="module-item" bindtap="goToPatriarchs">
+        <view class="module-seal">祖</view>
+        <view class="module-name">族长表</view>
+        <view class="module-desc">各堂基祖</view>
+      </view>
+
+      <view class="module-item" bindtap="goToSages">
+        <view class="module-seal">簪</view>
+        <view class="module-name">簪缨引</view>
+        <view class="module-desc">衣冠仕宦 · 历代簪缨</view>
+      </view>
+
+      <view class="module-item" bindtap="goToElite">
+        <view class="module-seal">贤</view>
+        <view class="module-name">乡贤榜</view>
+        <view class="module-desc">当今族人撷英</view>
+      </view>
+
+      <view class="module-item" bindtap="goToGraduates">
+        <view class="module-seal">学</view>
+        <view class="module-name">学历榜</view>
+        <view class="module-desc">功名与学历</view>
+      </view>
+    </view>
+  </view>
+
+  <clan-tabbar active="honor"></clan-tabbar>
+</view>

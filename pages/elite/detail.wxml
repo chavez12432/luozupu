@@ -1,0 +1,28 @@
+<!--pages/elite/detail.wxml-->
+<view class="container" wx:if="{{hero}}">
+  <view class="header">
+    <view class="name">{{hero.name}}</view>
+    <view class="meta">
+      <text>{{hero.branch}}</text>
+      <text class="dot">·</text>
+      <text>第{{hero.generation}}世</text>
+      <text wx:if="{{hero.birthYear}}" class="dot">·</text>
+      <text wx:if="{{hero.birthYear}}">生于{{hero.birthYear}}年</text>
+    </view>
+    <view class="summary" wx:if="{{hero.summary}}">{{hero.summary}}</view>
+  </view>
+
+  <scroll-view scroll-y class="content">
+    <view class="section-label">小传</view>
+    <view class="bio">
+      <view class="para" wx:for="{{hero.paragraphs}}" wx:key="index">{{item}}</view>
+    </view>
+  </scroll-view>
+
+  <view class="bottom-nav">
+    <view class="nav-item" bindtap="goBack">
+      <view class="nav-icon">←</view>
+      <text class="nav-text">返回名单</text>
+    </view>
+  </view>
+</view>

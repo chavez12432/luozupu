@@ -1,0 +1,22 @@
+<view class="clan-tabbar">
+  <view class="tab-item {{active === 'clan' ? 'active' : ''}}" data-key="clan" bindtap="onTap">
+    <view class="tab-seal">族</view>
+    <text class="tab-text">族人</text>
+  </view>
+  <view class="tab-item {{active === 'preface' ? 'active' : ''}}" data-key="preface" bindtap="onTap">
+    <view class="tab-seal">序</view>
+    <text class="tab-text">序文</text>
+  </view>
+  <view class="tab-item {{active === 'honor' ? 'active' : ''}}" data-key="honor" bindtap="onTap">
+    <view class="tab-seal">誉</view>
+    <text class="tab-text">荣誉</text>
+  </view>
+  <view class="tab-item {{active === 'tree' ? 'active' : ''}}" data-key="tree" bindtap="onTap">
+    <view class="tab-seal">谱</view>
+    <text class="tab-text">谱树</text>
+  </view>
+  <view class="tab-item {{active === 'me' ? 'active' : ''}}" data-key="me" bindtap="onTap">
+    <view class="tab-seal">我</view>
+    <text class="tab-text">我的</text>
+  </view>
+</view>

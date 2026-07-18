@@ -1,0 +1,21 @@
+<!--pages/auth/welcome.wxml-->
+<view class="auth-page paper-bg">
+  <view class="auth-card clan-card">
+    <logo-header size="md" showMotto="{{false}}" subtitle=""></logo-header>
+
+    <view class="auth-welcome-title">尊敬的宗亲</view>
+    <view class="auth-welcome-sub">欢迎进入江西安福高洲罗氏数字家谱</view>
+
+    <view class="auth-desc">
+      <text class="desc-line">本系统仅向本族成员开放，请完成身份验证。</text>
+      <text class="desc-line">游客可浏览「序文」；族人、谱树、荣誉等需认证后使用。</text>
+    </view>
+
+    <seal-button text="我是本族成员 · 进入验证" bind:click="startVerify"></seal-button>
+    <view class="auth-gap"></view>
+    <seal-button text="暂不进入 · 先看序文" type="ghost" bind:click="goPreface"></seal-button>
+    <seal-button text="退出系统" type="text" bind:click="exitApp"></seal-button>
+
+    <dev-footer></dev-footer>
+  </view>
+</view>

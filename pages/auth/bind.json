@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "绑定账号",
+  "usingComponents": {
+    "dev-footer": "/components/dev-footer/dev-footer"
+  }
+}

@@ -1,0 +1,49 @@
+<view class="container">
+  <view class="header">
+    <text class="title">数据导入</text>
+  </view>
+
+  <view class="content">
+    <!-- 说明卡片 -->
+    <view class="card">
+      <view class="card-title">导入说明</view>
+      <view class="card-content">
+        <text>1. 选择"所有表0409.json"文件</text>
+        <text>2. 系统会自动转换并导入数据</text>
+        <text>3. 导入过程可能需要几分钟</text>
+      </view>
+    </view>
+
+    <!-- 导入按钮 -->
+    <view class="btn-group">
+      <button class="btn btn-primary" bindtap="chooseFile" disabled="{{importing}}">
+        {{importing ? '导入中...' : '选择文件导入'}}
+      </button>
+      <button class="btn btn-danger" bindtap="clearDatabase" disabled="{{importing}}">
+        清空数据库
+      </button>
+    </view>
+
+    <!-- 进度显示 -->
+    <view class="progress-section" wx:if="{{importing || progress > 0}}">
+      <view class="progress-bar">
+        <view class="progress-fill" style="width: {{progress}}%"></view>
+      </view>
+      <view class="progress-text">
+        <text>{{status}}</text>
+        <text wx:if="{{total > 0}}">({{imported}} / {{total}})</text>
+      </view>
+    </view>
+
+    <!-- 错误列表 -->
+    <view class="error-section" wx:if="{{errors.length > 0}}">
+      <view class="error-title">导入错误 ({{errors.length}}条)</view>
+      <scroll-view scroll-y class="error-list">
+        <view class="error-item" wx:for="{{errors}}" wx:key="index">
+          <text class="error-name">{{item.name || '未知'}}</text>
+          <text class="error-msg">{{item.error}}</text>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</view>

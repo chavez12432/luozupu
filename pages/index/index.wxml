@@ -1,0 +1,100 @@
+<!--pages/index/index.wxml-->
+<view class="page paper-bg">
+  <!-- 游客态：数字宗祠入口 -->
+  <block wx:if="{{!isVerified}}">
+    <view class="guest-hero">
+      <logo-header size="lg" showMotto="{{true}}" subtitle="数字家谱 · 血脉传承"></logo-header>
+      <ancient-border padding="36rpx">
+        <view class="guest-tip">游客可浏览序文；查看族人、谱树、荣誉需完成身份验证。</view>
+        <seal-button text="我是本族成员 · 进入验证" bind:click="goToAuth"></seal-button>
+        <view class="guest-gap"></view>
+        <seal-button text="浏览序文" type="ghost" bind:click="goToPreface"></seal-button>
+      </ancient-border>
+    </view>
+    <clan-tabbar active="clan"></clan-tabbar>
+  </block>
+
+  <!-- 已认证：宗祠大厅 · 族人目录 -->
+  <block wx:else>
+    <view class="hall-header">
+      <view class="hall-brand">
+        <image class="hall-logo" src="/images/logo.jpg" mode="aspectFit" />
+        <view class="hall-text">
+          <view class="hall-title">江西安福高洲罗氏</view>
+          <view class="hall-sub" wx:if="{{accountName}}">您好，{{accountName}}</view>
+          <view class="hall-sub" wx:else>数字宗祠大厅</view>
+        </view>
+      </view>
+      <view class="header-stats">
+        <view class="stat-item">
+          <text class="stat-number">{{totalCount}}</text>
+          <text class="stat-label">族人</text>
+        </view>
+        <view class="stat-divider"></view>
+        <view class="stat-item">
+          <text class="stat-number">{{currentBranch || '全部'}}</text>
+          <text class="stat-label">分堂</text>
+        </view>
+        <view class="stat-divider"></view>
+        <view class="stat-item">
+          <text class="stat-number">{{currentGeneration || '全部'}}</text>
+          <text class="stat-label">世代</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="filter-bar clan-card">
+      <scroll-view scroll-x class="branch-scroll" enable-flex>
+        <view class="branch-list">
+          <view
+            wx:for="{{branches}}"
+            wx:key="*this"
+            class="branch-pill {{(currentBranch === '' && item === '全部') || currentBranch === item ? 'active' : ''}}"
+            data-branch="{{item}}"
+            bindtap="switchBranch"
+          >{{item}}</view>
+        </view>
+      </scroll-view>
+
+      <picker mode="selector" range="{{generationRange}}" range-key="label" bindchange="onGenerationChange">
+        <view class="gen-picker">
+          <text>{{currentGeneration ? '第 ' + currentGeneration + ' 世' : '全部世代'}}</text>
+          <text class="gen-arrow">▼</text>
+        </view>
+      </picker>
+    </view>
+
+    <scroll-view
+      scroll-y
+      class="list-scroll"
+      lower-threshold="120"
+      bindscrolltolower="loadMore"
+    >
+      <view wx:if="{{loading}}" class="state-box">
+        <view class="loading-spinner"></view>
+        <text class="state-text">加载中...</text>
+      </view>
+
+      <view wx:elif="{{members.length === 0}}" class="state-box">
+        <text class="state-text">暂无数据，请切换筛选条件</text>
+      </view>
+
+      <view wx:else class="member-list">
+        <person-card
+          wx:for="{{members}}"
+          wx:key="_id"
+          member="{{item}}"
+          bind:select="onPersonTap"
+        ></person-card>
+
+        <view class="footer-tip">
+          <text wx:if="{{loadingMore}}">加载更多...</text>
+          <text wx:elif="{{!hasMore}}">已显示全部 {{members.length}} 人</text>
+          <text wx:else>上拉加载更多</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <clan-tabbar active="clan"></clan-tabbar>
+  </block>
+</view>

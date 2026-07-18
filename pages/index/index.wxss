@@ -1,0 +1,188 @@
+.page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.guest-hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32rpx 36rpx 40rpx;
+  gap: 36rpx;
+}
+
+.guest-tip {
+  text-align: center;
+  font-size: 28rpx;
+  color: #5C4E3A;
+  line-height: 1.7;
+  margin-bottom: 32rpx;
+}
+
+.guest-gap {
+  height: 20rpx;
+}
+
+.hall-header {
+  background: linear-gradient(165deg, #C41E1E 0%, #9B1515 55%, #F7E8D0 55.2%);
+  padding: 28rpx 28rpx 20rpx;
+  flex-shrink: 0;
+}
+
+.hall-brand {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-bottom: 24rpx;
+}
+
+.hall-logo {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  border: 3rpx solid #C19A4B;
+  background: #FFF9F0;
+}
+
+.hall-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 3rpx;
+}
+
+.hall-sub {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.header-stats {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255, 249, 240, 0.95);
+  border: 2rpx solid rgba(193, 154, 75, 0.45);
+  border-radius: 16rpx;
+  padding: 18rpx 8rpx;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 0 28rpx;
+}
+
+.stat-number {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #C41E1E;
+}
+
+.stat-label {
+  display: block;
+  font-size: 22rpx;
+  color: #8A7A64;
+  margin-top: 4rpx;
+}
+
+.stat-divider {
+  width: 1rpx;
+  height: 44rpx;
+  background: rgba(193, 154, 75, 0.4);
+}
+
+.filter-bar {
+  margin: 16rpx 20rpx 0;
+  padding: 16rpx;
+  flex-shrink: 0;
+}
+
+.branch-scroll {
+  white-space: nowrap;
+  margin-bottom: 12rpx;
+}
+
+.branch-list {
+  display: inline-flex;
+  gap: 12rpx;
+}
+
+.branch-pill {
+  padding: 10rpx 24rpx;
+  background: rgba(193, 154, 75, 0.1);
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  color: #5C4E3A;
+  border: 1rpx solid transparent;
+}
+
+.branch-pill.active {
+  background: #C41E1E;
+  color: #fff;
+  border-color: #C19A4B;
+}
+
+.gen-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 12rpx;
+  background: rgba(247, 232, 208, 0.6);
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: #2C2416;
+}
+
+.gen-arrow {
+  font-size: 20rpx;
+  color: #C41E1E;
+}
+
+.list-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 16rpx 20rpx 0;
+  box-sizing: border-box;
+}
+
+.state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80rpx 0;
+}
+
+.loading-spinner {
+  width: 48rpx;
+  height: 48rpx;
+  border: 3rpx solid #E8D4B5;
+  border-top-color: #C41E1E;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.state-text {
+  margin-top: 16rpx;
+  font-size: 28rpx;
+  color: #8A7A64;
+}
+
+.member-list {
+  padding-bottom: 16rpx;
+}
+
+.footer-tip {
+  text-align: center;
+  padding: 20rpx 0 8rpx;
+  font-size: 24rpx;
+  color: #8A7A64;
+}

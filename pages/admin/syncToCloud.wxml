@@ -1,0 +1,64 @@
+<view class="container">
+  <view class="header">
+    <text class="title">数据同步到云端</text>
+  </view>
+
+  <view class="content">
+    <!-- 数据概览 -->
+    <view class="stats-card">
+      <view class="stat-item">
+        <text class="stat-value">{{localCount}}</text>
+        <text class="stat-label">本地数据</text>
+      </view>
+      <view class="stat-arrow">→</view>
+      <view class="stat-item">
+        <text class="stat-value">{{cloudCount}}</text>
+        <text class="stat-label">云端数据</text>
+      </view>
+    </view>
+
+    <!-- 同步按钮 -->
+    <view class="btn-group" wx:if="{{!syncing}}">
+      <button class="btn btn-primary" bindtap="startSync" disabled="{{localCount === 0}}">
+        同步到云端
+      </button>
+      <button class="btn btn-success" bindtap="downloadFromCloud">
+        从云端下载
+      </button>
+      <button class="btn btn-danger" bindtap="clearCloudData" disabled="{{cloudCount === 0}}">
+        清空云端数据
+      </button>
+    </view>
+
+    <!-- 进度显示 -->
+    <view class="progress-section" wx:if="{{syncing}}">
+      <view class="progress-bar">
+        <view class="progress-fill" style="width: {{progress}}%"></view>
+      </view>
+      <view class="progress-text">
+        <text>{{status}}</text>
+      </view>
+    </view>
+
+    <!-- 说明 -->
+    <view class="info-card">
+      <view class="info-title">使用说明</view>
+      <view class="info-content">
+        <text>1. 在Web后台管理数据，数据会自动保存在本地</text>
+        <text>2. 打开此页面，点击"同步到云端"</text>
+        <text>3. 数据将上传到微信云开发数据库</text>
+        <text>4. 小程序可以直接访问云端数据</text>
+      </view>
+    </view>
+
+    <!-- 错误列表 -->
+    <view class="error-section" wx:if="{{errors.length > 0}}">
+      <view class="error-title">同步错误 ({{errors.length}}条)</view>
+      <scroll-view scroll-y class="error-list">
+        <view class="error-item" wx:for="{{errors}}" wx:key="index">
+          <text class="error-text">{{item.error}}</text>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</view>

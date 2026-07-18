@@ -1,0 +1,15 @@
+{
+  "name": "罗测试A",
+  "generation": 25,
+  "branch": "明儒堂",
+  "gender": "男",
+  "isAlive": true,
+  "hasBrokenLineage": true,
+  "brokenLineageNote": "历史原因，父辈记录缺失",
+  "estimatedFatherName": "罗某（待考）",
+  "estimatedFatherGeneration": 24,
+  "birthplace": "广东梅州",
+  "residence": "深圳",
+  "createdAt": {"$date": "2024-01-01T00:00:00.000Z"},
+  "updatedAt": {"$date": "2024-01-01T00:00:00.000Z"}
+}

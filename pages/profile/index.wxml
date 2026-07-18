@@ -1,0 +1,90 @@
+<!--pages/profile/index.wxml-->
+<view class="container">
+  <view class="user-section">
+    <view class="avatar">
+      <text class="avatar-text">{{account ? account.name[0] : '罗'}}</text>
+    </view>
+    <view class="user-info">
+      <text class="user-name">{{account ? account.name : '未认证用户'}}</text>
+      <text class="user-role" wx:if="{{isVerified}}">已认证 · {{phoneMasked}}</text>
+      <text class="user-role" wx:else>尚未完成身份验证</text>
+    </view>
+  </view>
+
+  <view wx:if="{{!isVerified}}" class="verify-banner" bindtap="goVerify">
+    <text>点击完成身份验证后使用完整功能</text>
+  </view>
+
+  <view class="stats-section">
+    <view class="stats-title">族谱统计</view>
+    <view class="stats-grid">
+      <view class="stat-item">
+        <text class="stat-num">{{stats.totalMembers}}</text>
+        <text class="stat-label">总人数</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-num">40</text>
+        <text class="stat-label">世代</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-num">4</text>
+        <text class="stat-label">分堂</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-num">{{stats.brokenCount}}</text>
+        <text class="stat-label">断层</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="menu-section" wx:if="{{isVerified}}">
+    <view class="menu-title">我的家谱</view>
+    <view class="menu-item" bindtap="goMyProfile">
+      <view class="menu-icon">👤</view>
+      <view class="menu-content">
+        <text class="menu-name">我的资料与家属管理</text>
+        <text class="menu-desc">编辑本人资料，添加子女/配偶</text>
+      </view>
+      <view class="menu-arrow">→</view>
+    </view>
+    <view class="menu-item" bindtap="goRebind">
+      <view class="menu-icon">🔗</view>
+      <view class="menu-content">
+        <text class="menu-name">修改手机号 / 微信号绑定</text>
+        <text class="menu-desc">更新登录手机与微信号</text>
+      </view>
+      <view class="menu-arrow">→</view>
+    </view>
+  </view>
+
+  <view class="menu-section" wx:if="{{isLocal}}">
+    <view class="menu-title">本机调试</view>
+    <view class="menu-item" bindtap="logout">
+      <view class="menu-icon">🚪</view>
+      <view class="menu-content">
+        <text class="menu-name">退出本地登录</text>
+        <text class="menu-desc">清除本机认证缓存，便于重新走验证流程</text>
+      </view>
+      <view class="menu-arrow">→</view>
+    </view>
+  </view>
+
+  <view class="menu-section">
+    <view class="menu-title">管理功能</view>
+
+    <view class="menu-item" bindtap="importData">
+      <view class="menu-icon">📥</view>
+      <view class="menu-content">
+        <text class="menu-name">导入数据</text>
+        <text class="menu-desc">从Excel批量导入成员</text>
+      </view>
+      <view class="menu-arrow">→</view>
+    </view>
+  </view>
+
+  <view class="about-section">
+    <text class="about-title">高洲罗氏族谱管理系统</text>
+    <text class="about-version">版本 0.2.0（认证首期）</text>
+    <text class="about-desc">{{isLocal ? '本地调试模式' : '云开发模式'}}</text>
+  </view>
+</view>

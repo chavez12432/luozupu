@@ -1,0 +1,5 @@
+<view class="dev-footer {{compact ? 'compact' : ''}}">
+  <view class="dev-line">软件开发人员：罗阳先（明儒堂 35 世）</view>
+  <view class="dev-hint">如需更正族谱资料，可通过留言联系开发人员。</view>
+  <view class="dev-btn" bindtap="goLeaveMessage">向开发人员留言</view>
+</view>

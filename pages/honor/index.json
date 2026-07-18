@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "荣誉堂",
+  "usingComponents": {
+    "clan-tabbar": "/components/clan-tabbar/clan-tabbar"
+  }
+}

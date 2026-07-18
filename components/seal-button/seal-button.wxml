@@ -1,0 +1,4 @@
+<view
+  class="seal-btn type-{{type}} {{disabled ? 'disabled' : ''}}"
+  bindtap="onTap"
+>{{text}}</view>

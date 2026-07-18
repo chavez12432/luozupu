@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "openapi": []
+  },
+  "desc": "管理员API，支持HTTP触发访问数据库",
+  "envVariables": {},
+  "timeout": 60,
+  "memorySize": 256,
+  "triggers": [
+    {
+      "name": "http_trigger",
+      "type": "http",
+      "config": "ANY"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+@import "./auth-common.wxss";
+
+.auth-textarea {
+  width: 100%;
+  min-height: 200rpx;
+  padding: 20rpx 24rpx;
+  border: 2rpx solid #e8ddd0;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  box-sizing: border-box;
+  background: #faf8f5;
+  margin-bottom: 28rpx;
+}

@@ -1,0 +1,7 @@
+<view class="logo-header size-{{size}}">
+  <image class="logo-img" src="{{logoPath}}" mode="aspectFit" />
+  <view class="logo-title">{{title}}</view>
+  <view class="logo-sub" wx:if="{{subtitle}}">{{subtitle}}</view>
+  <view class="logo-motto" wx:if="{{showMotto}}">一脉相承 · 千年家风</view>
+  <view class="gold-line"></view>
+</view>

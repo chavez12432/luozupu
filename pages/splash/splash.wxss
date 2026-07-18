@@ -1,0 +1,144 @@
+.splash {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18vh 48rpx 12vh;
+  box-sizing: border-box;
+  opacity: 0;
+  transition: opacity 1.1s ease;
+}
+
+.phase-1,
+.phase-2,
+.phase-3,
+.phase-4,
+.phase-5 {
+  opacity: 1;
+}
+
+.ink-wash {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: 28%;
+  height: 42%;
+  background: radial-gradient(ellipse at center, rgba(196, 30, 30, 0.08), transparent 68%);
+  opacity: 0;
+  transform: scaleX(0.4);
+  transition: opacity 1.2s ease, transform 1.4s ease;
+  pointer-events: none;
+}
+
+.phase-4 .ink-wash,
+.phase-5 .ink-wash {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.cloud-soft {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 40%;
+  background: linear-gradient(180deg, transparent, rgba(193, 154, 75, 0.08));
+  pointer-events: none;
+}
+
+.splash-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  z-index: 1;
+}
+
+.splash-logo {
+  width: 240rpx;
+  height: 240rpx;
+  border-radius: 50%;
+  opacity: 0;
+  transform: translateY(16rpx) scale(0.96);
+  transition: opacity 0.9s ease, transform 1s ease;
+  box-shadow: 0 16rpx 40rpx rgba(196, 30, 30, 0.22);
+}
+
+.phase-2 .splash-logo,
+.phase-3 .splash-logo,
+.phase-4 .splash-logo,
+.phase-5 .splash-logo {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.splash-title {
+  margin-top: 40rpx;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #2C2416;
+  letter-spacing: 8rpx;
+  opacity: 0;
+  transform: translateY(12rpx);
+  transition: opacity 0.8s ease, transform 0.9s ease;
+}
+
+.phase-3 .splash-title,
+.phase-4 .splash-title,
+.phase-5 .splash-title {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.splash-slogan {
+  margin-top: 16rpx;
+  font-size: 26rpx;
+  color: #C19A4B;
+  letter-spacing: 6rpx;
+  opacity: 0;
+  transition: opacity 0.8s ease 0.1s;
+}
+
+.phase-3 .splash-slogan,
+.phase-4 .splash-slogan,
+.phase-5 .splash-slogan {
+  opacity: 1;
+}
+
+.splash-motto {
+  margin-top: 48rpx;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+.phase-4 .splash-motto,
+.phase-5 .splash-motto {
+  opacity: 1;
+}
+
+.motto-line {
+  display: block;
+  font-size: 30rpx;
+  color: #C41E1E;
+  letter-spacing: 16rpx;
+  line-height: 1.8;
+  font-weight: 600;
+}
+
+.splash-action {
+  width: 100%;
+  max-width: 480rpx;
+  z-index: 1;
+  opacity: 0;
+  transform: translateY(20rpx);
+  transition: opacity 0.8s ease, transform 0.9s ease;
+}
+
+.phase-5 .splash-action {
+  opacity: 1;
+  transform: translateY(0);
+}

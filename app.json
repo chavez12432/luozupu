@@ -1,0 +1,39 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/splash/splash",
+    "pages/auth/welcome",
+    "pages/auth/name",
+    "pages/auth/birthday",
+    "pages/auth/father",
+    "pages/auth/bind",
+    "pages/auth/appeal",
+    "pages/member/detail",
+    "pages/member/edit",
+    "pages/member/add-family",
+    "pages/account/rebind",
+    "pages/message/leave",
+    "pages/wife-detail/wife-detail",
+    "pages/profile/index",
+    "pages/preface/list",
+    "pages/preface/detail",
+    "pages/admin/dataImport",
+    "pages/admin/syncToCloud",
+    "pages/honor/index",
+    "pages/family-tree/family-tree",
+    "pages/patriarchs/patriarchs",
+    "pages/sages/sages",
+    "pages/elite/elite",
+    "pages/elite/detail",
+    "pages/graduates/graduates"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#C41E1E",
+    "navigationBarTitleText": "高洲罗氏家谱",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#F7E8D0"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "高洲罗氏家谱",
+  "usingComponents": {
+    "logo-header": "/components/logo-header/logo-header",
+    "seal-button": "/components/seal-button/seal-button",
+    "ancient-border": "/components/ancient-border/ancient-border",
+    "clan-tabbar": "/components/clan-tabbar/clan-tabbar",
+    "person-card": "/components/person-card/person-card"
+  }
+}

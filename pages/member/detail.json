@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "成员详情",
+  "usingComponents": {
+    "dev-footer": "/components/dev-footer/dev-footer"
+  }
+}

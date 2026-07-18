@@ -1,0 +1,25 @@
+<view class="auth-page">
+  <view class="auth-card">
+    <view class="auth-title">父亲姓名验证</view>
+    <view class="auth-desc">请输入父亲姓名（不用输入姓氏）</view>
+
+    <text class="auth-label">父亲名字</text>
+    <input
+      class="auth-input"
+      placeholder="请输入父亲名字"
+      value="{{fatherName}}"
+      bindinput="onInput"
+      maxlength="20"
+    />
+
+    <view wx:if="{{error}}" class="error-box">
+      <text class="error-text">{{error}}</text>
+    </view>
+
+    <view class="auth-btn auth-btn-primary" bindtap="submit">下一步</view>
+    <view wx:if="{{canAppeal}}" class="auth-btn auth-btn-ghost" bindtap="goAppeal">人工申诉</view>
+    <view class="auth-btn auth-btn-text" bindtap="restart">重新验证</view>
+
+    <dev-footer compact="{{true}}"></dev-footer>
+  </view>
+</view>

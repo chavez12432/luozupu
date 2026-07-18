@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "ancient-border": "/components/ancient-border/ancient-border"
+  }
+}

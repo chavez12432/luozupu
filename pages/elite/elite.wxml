@@ -1,0 +1,46 @@
+<!--pages/elite/elite.wxml-->
+<view class="container">
+  <view class="header">
+    <view class="header-title">⭐ 乡贤榜</view>
+    <view class="header-sub">当今族人撷英</view>
+  </view>
+
+  <scroll-view scroll-y class="content">
+    <view class="loading" wx:if="{{loading}}">加载中...</view>
+    
+    <view wx:elif="{{elite.length === 0}}" class="empty">
+      <text>暂无数据</text>
+    </view>
+    
+    <view wx:else class="elite-list">
+      <view 
+        wx:for="{{elite}}" 
+        wx:key="id"
+        class="elite-item"
+        data-id="{{item.id}}"
+        bindtap="viewHero"
+      >
+        <view class="elite-index">{{index + 1}}</view>
+        <view class="elite-info">
+          <view class="elite-name">{{item.name}}</view>
+          <view class="elite-meta">
+            <text class="branch-text">{{item.branch}}</text>
+            <text class="gen-text">第{{item.generation}}世</text>
+          </view>
+        </view>
+        <view class="elite-arrow">›</view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="bottom-nav">
+    <view class="nav-item" bindtap="goBack">
+      <view class="nav-icon">←</view>
+      <text class="nav-text">返回</text>
+    </view>
+    <view class="nav-item" bindtap="goToHonor">
+      <view class="nav-icon">🏆</view>
+      <text class="nav-text">荣誉榜</text>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,5 @@
+<ancient-border padding="28rpx">
+  <view class="family-card-title" wx:if="{{title}}">{{title}}</view>
+  <view class="family-card-desc" wx:if="{{desc}}">{{desc}}</view>
+  <slot></slot>
+</ancient-border>

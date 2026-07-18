@@ -1,0 +1,81 @@
+.page {
+  min-height: 100vh;
+  background: #f5f0e8;
+  padding: 24rpx;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+}
+
+.title {
+  font-size: 34rpx;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 12rpx;
+}
+
+.desc {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 32rpx;
+}
+
+.block {
+  margin-bottom: 40rpx;
+}
+
+.label {
+  display: block;
+  font-size: 26rpx;
+  color: #8B4513;
+  margin-bottom: 8rpx;
+}
+
+.value {
+  display: block;
+  font-size: 30rpx;
+  margin-bottom: 16rpx;
+}
+
+.input {
+  height: 80rpx;
+  padding: 0 20rpx;
+  border: 2rpx solid #e8ddd0;
+  border-radius: 10rpx;
+  background: #faf8f5;
+  font-size: 28rpx;
+  margin-bottom: 16rpx;
+}
+
+.btn {
+  height: 84rpx;
+  line-height: 84rpx;
+  text-align: center;
+  border-radius: 42rpx;
+  font-size: 28rpx;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #8B4513, #A0522D);
+  color: #fff;
+  border: none;
+}
+
+.btn::after {
+  border: none;
+}
+
+.error {
+  color: #c0392b;
+  font-size: 26rpx;
+}
+
+.hint {
+  font-size: 24rpx;
+  color: #888;
+  margin: 8rpx 0 16rpx;
+}

@@ -1,0 +1,157 @@
+/* pages/sages/sages.wxss */
+.container {
+  min-height: 100vh;
+  background-color: #faf8f5;
+  padding-bottom: 120rpx;
+}
+
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 30rpx;
+}
+
+.header-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 8rpx;
+}
+
+.header-sub {
+  font-size: 22rpx;
+  text-align: center;
+  opacity: 0.85;
+  margin-bottom: 20rpx;
+}
+
+.dynasty-tabs {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.dynasty-tab {
+  padding: 10rpx 24rpx;
+  background: rgba(255,255,255,0.2);
+  border-radius: 20rpx;
+  font-size: 24rpx;
+}
+
+.dynasty-tab.active {
+  background: white;
+  color: #667eea;
+}
+
+.content {
+  padding: 30rpx;
+  height: calc(100vh - 340rpx);
+}
+
+.intro {
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #666;
+  background: #fff;
+  padding: 20rpx 24rpx;
+  border-radius: 12rpx;
+  margin-bottom: 20rpx;
+  border-left: 6rpx solid #764ba2;
+}
+
+.loading, .empty {
+  text-align: center;
+  padding: 60rpx;
+  color: #999;
+}
+
+.sage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.sage-item {
+  background: white;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  display: flex;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.08);
+}
+
+.sage-icon {
+  font-size: 40rpx;
+  margin-right: 20rpx;
+}
+
+.sage-info {
+  flex: 1;
+}
+
+.sage-name {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+  display: inline-block;
+}
+
+.sage-name.link {
+  color: #5b4bb7;
+  text-decoration: underline;
+  text-underline-offset: 4rpx;
+}
+
+.sage-meta {
+  display: flex;
+  gap: 12rpx;
+  margin: 8rpx 0;
+  align-items: center;
+}
+
+.dynasty-tag {
+  background: #764ba2;
+  color: white;
+  padding: 4rpx 12rpx;
+  border-radius: 10rpx;
+  font-size: 20rpx;
+}
+
+.gen-text, .year-text {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.sage-achievements {
+  font-size: 24rpx;
+  color: #666;
+  margin-top: 8rpx;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  display: flex;
+  justify-content: center;
+  gap: 60rpx;
+  padding: 16rpx;
+  border-top: 1rpx solid #eee;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  color: #667eea;
+}
+
+.nav-icon {
+  font-size: 32rpx;
+  margin-right: 8rpx;
+}
+
+.nav-text {
+  font-size: 26rpx;
+}

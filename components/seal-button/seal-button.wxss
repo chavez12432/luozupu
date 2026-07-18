@@ -1,0 +1,38 @@
+.seal-btn {
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  font-size: 30rpx;
+  letter-spacing: 6rpx;
+  font-weight: 600;
+}
+
+.type-primary {
+  background: linear-gradient(180deg, #D42A2A 0%, #C41E1E 55%, #9B1515 100%);
+  color: #fff;
+  box-shadow: 0 8rpx 20rpx rgba(196, 30, 30, 0.28);
+}
+
+.type-ghost {
+  background: transparent;
+  color: #C41E1E;
+  border: 2rpx solid #C19A4B;
+}
+
+.type-text {
+  background: transparent;
+  color: #8A7A64;
+  font-weight: 400;
+  letter-spacing: 2rpx;
+  font-size: 26rpx;
+}
+
+.disabled {
+  opacity: 0.45;
+}
+
+.type-primary:active,
+.type-ghost:active {
+  opacity: 0.9;
+}

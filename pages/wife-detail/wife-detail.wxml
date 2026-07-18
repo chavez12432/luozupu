@@ -1,0 +1,83 @@
+<!--pages/wife-detail/wife-detail.wxml-->
+<scroll-view scroll-y class="container">
+  <view wx:if="{{loading}}" class="loading">加载中...</view>
+  
+  <view wx:else class="detail-content">
+    <!-- 基本信息 -->
+    <view class="info-section">
+      <view class="header">
+        <text class="name">{{wife.name}}</text>
+        <text class="tag">媳妇</text>
+      </view>
+      
+      <view class="tags">
+        <text class="tag branch-{{husbandBranchCode}}">{{husbandBranch}}</text>
+        <text class="tag generation">第{{wife.generation}}世</text>
+      </view>
+    </view>
+
+    <!-- 丈夫信息 -->
+    <view class="section family-section">
+      <view class="family-title">丈夫</view>
+      <view class="family-row">
+        <text class="family-label">丈夫</text>
+        <navigator
+          wx:if="{{husbandDocId}}"
+          open-type="redirect"
+          url="/pages/member/detail?id={{husbandDocId}}"
+          class="family-name clickable"
+          hover-class="link-hover"
+        >{{wife.husbandName}}</navigator>
+        <view wx:else class="family-name empty"></view>
+      </view>
+    </view>
+
+    <!-- 婚姻信息 -->
+    <view class="section info-section-light">
+      <view class="info-row">
+        <text class="info-label">婚配类型</text>
+        <text class="info-value">{{wife.marriageType || '配'}}</text>
+      </view>
+      <view class="info-row" wx:if="{{wife.marriageStatus}}">
+        <text class="info-label">婚姻状态</text>
+        <text class="info-value">{{marriageStatusText}}</text>
+      </view>
+    </view>
+
+    <!-- 生卒日期 -->
+    <view class="section" wx:if="{{wife.birthDate || wife.deathDate}}">
+      <view class="section-title">生卒日期</view>
+      <view class="dates-section">
+        <view class="date-item" wx:if="{{wife.birthDate}}">
+          <text class="date-label">出生日期</text>
+          <text class="date-value">{{wife.birthDate.formatted || wife.birthDate.lunar.year + '年' + (wife.birthDate.lunar.month || '') + '月'}}</text>
+        </view>
+        <view class="date-item" wx:if="{{wife.deathDate}}">
+          <text class="date-label">逝世日期</text>
+          <text class="date-value">{{wife.deathDate.formatted || wife.deathDate.lunar.year + '年' + (wife.deathDate.lunar.month || '') + '月'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 葬地 -->
+    <view class="section" wx:if="{{wife.burialPlace}}">
+      <view class="section-title">葬地</view>
+      <view class="section-content">
+        <text>{{wife.burialPlace}}</text>
+      </view>
+    </view>
+
+    <!-- 备注 -->
+    <view class="section remark-section" wx:if="{{wife.remark}}">
+      <view class="remark-title">备注</view>
+      <view class="remark-content">
+        <text>{{wife.remark}}</text>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="action-buttons">
+      <button class="btn btn-back" bindtap="goBack">返回</button>
+    </view>
+  </view>
+</scroll-view>

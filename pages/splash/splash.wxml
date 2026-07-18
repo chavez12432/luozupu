@@ -1,0 +1,18 @@
+<view class="splash paper-bg phase-{{phase}}">
+  <view class="ink-wash"></view>
+  <view class="cloud-soft"></view>
+
+  <view class="splash-main">
+    <image class="splash-logo" src="/images/logo.jpg" mode="aspectFit" />
+    <view class="splash-title">江西安福高洲罗氏家谱</view>
+    <view class="splash-slogan">数字家谱 · 血脉传承</view>
+    <view class="splash-motto">
+      <text class="motto-line">一脉相承</text>
+      <text class="motto-line">千年家风</text>
+    </view>
+  </view>
+
+  <view class="splash-action">
+    <seal-button text="进入家谱" bind:click="enterClan"></seal-button>
+  </view>
+</view>

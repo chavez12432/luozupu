@@ -1,0 +1,60 @@
+<!--pages/sages/sages.wxml-->
+<view class="container">
+  <view class="header">
+    <view class="header-title">📜 簪缨引</view>
+    <view class="header-sub">衣冠仕宦 · 历代簪缨</view>
+    <view class="dynasty-tabs">
+      <view
+        wx:for="{{dynasties}}"
+        wx:key="*this"
+        class="dynasty-tab {{currentDynasty === item ? 'active' : ''}}"
+        data-dynasty="{{item}}"
+        bindtap="switchDynasty"
+      >{{item}}</view>
+    </view>
+  </view>
+
+  <scroll-view scroll-y class="content" bindscrolltolower="loadMore">
+    <view class="intro" wx:if="{{intro}}">{{intro}}</view>
+
+    <view class="loading" wx:if="{{loading && sages.length === 0}}">加载中...</view>
+
+    <view wx:elif="{{sages.length === 0}}" class="empty">
+      <text>暂无数据</text>
+    </view>
+
+    <view wx:else class="sage-list">
+      <view
+        wx:for="{{sages}}"
+        wx:key="_id"
+        class="sage-item"
+      >
+        <view class="sage-icon">{{item.dynasty === '宋' ? '📿' : item.dynasty === '元' ? '🛡️' : item.dynasty === '明' ? '⚔️' : item.dynasty === '近现代' ? '⭐' : '🏮'}}</view>
+        <view class="sage-info">
+          <view
+            class="sage-name {{item.hasLink ? 'link' : ''}}"
+            data-id="{{item.memberDocId}}"
+            data-link="{{item.hasLink}}"
+            bindtap="viewMember"
+          >{{item.name}}</view>
+          <view class="sage-meta">
+            <text class="dynasty-tag">{{item.dynasty}}</text>
+            <text class="gen-text">第{{item.generation}}世</text>
+          </view>
+          <view class="sage-achievements">{{item.achievements}}</view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="bottom-nav">
+    <view class="nav-item" bindtap="goBack">
+      <view class="nav-icon">←</view>
+      <text class="nav-text">返回</text>
+    </view>
+    <view class="nav-item" bindtap="goToHonor">
+      <view class="nav-icon">🏆</view>
+      <text class="nav-text">荣誉榜</text>
+    </view>
+  </view>
+</view>

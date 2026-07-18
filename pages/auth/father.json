@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "父亲信息验证",
+  "usingComponents": {
+    "dev-footer": "/components/dev-footer/dev-footer"
+  }
+}

@@ -1,0 +1,35 @@
+<view class="container">
+  <view class="header">
+    <text class="title">族谱序文</text>
+    <text class="subtitle">高洲罗氏族谱历代序跋</text>
+  </view>
+  
+  <view class="preface-list">
+    <view 
+      class="preface-item" 
+      wx:for="{{prefaces}}" 
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="goToDetail"
+    >
+      <view class="item-number">{{item.id}}</view>
+      <view class="item-content">
+        <text class="item-title">{{item.title}}</text>
+        <view class="item-meta">
+          <view class="meta-row">
+            <text class="meta-item">作者：{{item.authorName}}</text>
+            <text class="meta-item">世系：{{item.authorGeneration}}</text>
+          </view>
+          <view class="meta-row">
+            <text class="meta-item">朝代：{{item.dynasty}}</text>
+            <text class="meta-item">公元：{{item.year}}</text>
+          </view>
+        </view>
+        <text class="item-summary">{{item.summary}}</text>
+      </view>
+      <view class="item-arrow">›</view>
+    </view>
+  </view>
+
+  <clan-tabbar active="preface"></clan-tabbar>
+</view>

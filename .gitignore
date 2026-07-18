@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+admin/node_modules/
+admin-vite/node_modules/
+**/miniprogram_npm/
+
+# build / cache
+dist/
+.miniprogram/
+*.log
+.DS_Store
+Thumbs.db
+
+# secrets / local IDE
+.env
+.env.*
+!.env.example
+.cursor/
+
+# WeChat private local overrides (keep project.config.json)
+# project.private.config.json can stay if no secrets
+
+# large / personal genealogy extracts (keep small design docs if needed)
+database/*.xlsx
+database/*.jsonl
+database/*_report.json
+database/children_*.json
+database/wife_*.json
+database/_*.json
+# allow small design/reference if any named differently
+!database/dynasty_eras.json
+!database/init.js
+
+# local-only packages
+pkg-local/

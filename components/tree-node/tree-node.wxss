@@ -1,0 +1,26 @@
+.tree-node {
+  min-width: 120rpx;
+  padding: 16rpx 20rpx;
+  text-align: center;
+  background: #FFF9F0;
+  border: 2rpx solid #C19A4B;
+  border-radius: 12rpx;
+  box-shadow: 0 4rpx 12rpx rgba(44, 36, 22, 0.08);
+}
+
+.tree-node.active {
+  border-color: #C41E1E;
+  background: rgba(196, 30, 30, 0.06);
+}
+
+.node-gen {
+  font-size: 20rpx;
+  color: #C19A4B;
+  margin-bottom: 4rpx;
+}
+
+.node-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #2C2416;
+}

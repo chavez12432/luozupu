@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>查询族人记录</title>
+</head>
+<body>
+  <h2>查询族人记录</h2>
+  <input type="text" id="nameInput" placeholder="输入姓名，如：相文">
+  <button onclick="queryMember()">查询</button>
+  <pre id="result"></pre>
+
+  <h3>批量更新成功的42人</h3>
+  <p id="names"></p>
+
+  <script>
+    const baseUrl = 'https://luoshi-7g0fx8maef33f709-1420383154.ap-shanghai.app.tcloudbase.com';
+    
+    // 批量更新成功的42人
+    const successNames = ["京丽","京华","传芳","冬香","双群","国才","娇云","娟","娟娟","少林","庆良","建新","建明","强飞","微","德才","志丽","志兵","志坚","志芳","志萍","慧兰","明华","晓红","林","毅","池美","现才","玲","琴","相文","群","聪","胜良","艳群","荣","莉","钟良","阳先","青","顶飞","飞"];
+    
+    document.getElementById('names').textContent = successNames.join('、');
+    
+    async function queryMember() {
+      const name = document.getElementById('nameInput').value.trim();
+      if (!name) return;
+      
+      document.getElementById('result').textContent = '查询中...';
+      
+      try {
+        const res = await fetch(baseUrl + '/adminApi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'debugMember', name: name })
+        });
+        const data = await res.json();
+        document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById('result').textContent = '错误: ' + err.message;
+      }
+    }
+    
+    // 页面加载后自动查询"相文"
+    window.onload = () => {
+      document.getElementById('nameInput').value = '相文';
+      queryMember();
+    };
+  </script>
+</body>
+</html>

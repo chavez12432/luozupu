@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "出生日期验证",
+  "usingComponents": {
+    "dev-footer": "/components/dev-footer/dev-footer"
+  }
+}

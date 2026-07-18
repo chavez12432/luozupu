@@ -1,0 +1,43 @@
+<view class="auth-page">
+  <view class="auth-card">
+    <view class="auth-title">农历生日验证</view>
+    <view class="auth-desc">请选择您的农历出生日期</view>
+
+    <view wx:if="{{matchCount > 1}}" class="candidate-tip">
+      找到多个同名人员，请选择出生年份进一步确认
+    </view>
+
+    <text class="auth-label">农历年份</text>
+    <picker mode="selector" range="{{years}}" value="{{yearIndex}}" bindchange="onYearChange">
+      <view class="picker-row">
+        <text>{{years[yearIndex]}}年</text>
+        <text class="picker-arrow">▼</text>
+      </view>
+    </picker>
+
+    <text class="auth-label">农历月份</text>
+    <picker mode="selector" range="{{months}}" range-key="label" value="{{monthIndex}}" bindchange="onMonthChange">
+      <view class="picker-row">
+        <text>{{months[monthIndex].label}}</text>
+        <text class="picker-arrow">▼</text>
+      </view>
+    </picker>
+
+    <text class="auth-label">农历日期</text>
+    <picker mode="selector" range="{{days}}" range-key="label" value="{{dayIndex}}" bindchange="onDayChange">
+      <view class="picker-row">
+        <text>{{days[dayIndex].label}}</text>
+        <text class="picker-arrow">▼</text>
+      </view>
+    </picker>
+
+    <view wx:if="{{error}}" class="error-box">
+      <text class="error-text">{{error}}</text>
+    </view>
+
+    <view class="auth-btn auth-btn-primary" bindtap="submit">下一步</view>
+    <view wx:if="{{canAppeal}}" class="auth-btn auth-btn-ghost" bindtap="goAppeal">人工申诉</view>
+
+    <dev-footer compact="{{true}}"></dev-footer>
+  </view>
+</view>

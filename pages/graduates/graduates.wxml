@@ -1,0 +1,83 @@
+<!--pages/graduates/graduates.wxml-->
+<view class="container">
+  <view class="header">
+    <view class="header-title">🎓 学历榜</view>
+    <view class="header-sub">功名与学历</view>
+    <view class="type-tabs">
+      <view
+        wx:for="{{tabs}}"
+        wx:key="key"
+        class="type-tab {{currentTab === item.key ? 'active' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="switchTab"
+      >
+        <text>{{item.label}}</text>
+        <text class="tab-count">{{item.count || 0}}</text>
+      </view>
+    </view>
+  </view>
+
+  <scroll-view scroll-y class="content">
+    <view class="loading" wx:if="{{loading}}">加载中...</view>
+
+    <view wx:elif="{{list.length === 0}}" class="empty">
+      <text>暂无数据</text>
+    </view>
+
+    <view wx:else class="honor-list">
+      <view
+        wx:for="{{list}}"
+        wx:for-item="person"
+        wx:for-index="pIdx"
+        wx:key="pIdx"
+        class="honor-item"
+        data-id="{{person._id}}"
+        bindtap="viewMember"
+      >
+        <view class="honor-name link">{{person.name}}</view>
+
+        <view class="honor-row">
+          <text class="label">出生</text>
+          <text class="value">{{person.birthText}}</text>
+        </view>
+
+        <!-- 科举功名 -->
+        <block wx:if="{{currentTab === 'imperial'}}">
+          <view class="honor-row">
+            <text class="label">朝代年号</text>
+            <text class="value">{{person.dynastyEra}}</text>
+          </view>
+          <view class="honor-row">
+            <text class="label">称号</text>
+            <text class="value title-tag">{{person.titleText}}</text>
+          </view>
+        </block>
+
+        <!-- 近现代学历分层 -->
+        <view wx:else class="edu-block">
+          <view
+            wx:for="{{person.educations}}"
+            wx:for-item="edu"
+            wx:for-index="eduIdx"
+            wx:key="eduIdx"
+            class="edu-line"
+          >
+            <text class="edu-degree">{{edu.degree}}</text>
+            <text class="edu-school">{{edu.school}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="bottom-nav">
+    <view class="nav-item" bindtap="goBack">
+      <view class="nav-icon">←</view>
+      <text class="nav-text">返回</text>
+    </view>
+    <view class="nav-item" bindtap="goToHonor">
+      <view class="nav-icon">🏆</view>
+      <text class="nav-text">荣誉榜</text>
+    </view>
+  </view>
+</view>
