@@ -75,37 +75,13 @@ function buildSpousesFromMember(member) {
 }
 
 /**
- * 合并 wives 表记录与备注解析：以备注姓名为准，尽量保留 wives._id 供跳转
+ * 合并 wives 表记录与备注解析。
+ * 已有妻子表记录时以库为准（保留 _id / 同名多配）；否则再回退备注/成员字段。
  */
 function mergeWivesWithRemark(dbWives, member) {
-  const parsed = parseSpousesFromRemark(member.remark || '');
   const fromDb = dedupeSpouses(dbWives || []);
-
-  if (!parsed.length) {
-    return fromDb.length ? fromDb : buildSpousesFromMember(member);
-  }
-
-  const byName = new Map();
-  fromDb.forEach(w => {
-    const n = normalizeSpouseName(w.name);
-    if (n) byName.set(n, w);
-  });
-
-  return parsed.map((p, idx) => {
-    const existing = byName.get(p.name);
-    return {
-      _id: existing ? existing._id : '',
-      name: p.name,
-      maidenName: p.maidenName || (existing && existing.maidenName) || '',
-      hometown: p.hometown || (existing && existing.hometown) || '',
-      marriageType: p.marriageType,
-      marriageOrder: p.marriageOrder || idx + 1,
-      burialPlace: existing ? existing.burialPlace : '',
-      remark: existing ? existing.remark : '',
-      birthDate: existing ? existing.birthDate : null,
-      deathDate: existing ? existing.deathDate : null
-    };
-  });
+  if (fromDb.length) return fromDb;
+  return buildSpousesFromMember(member);
 }
 
 module.exports = {

@@ -23,7 +23,11 @@ Page({
     if (this.data.loading) return;
     const fatherName = String(this.data.fatherName || '').trim();
     if (!fatherName) {
-      this.setData({ error: '请输入父亲姓名' });
+      this.setData({ error: '请输入父亲全名' });
+      return;
+    }
+    if (!fatherName.startsWith('罗')) {
+      this.setData({ error: '请输入父亲含「罗」姓的全名，例如：罗鼓声' });
       return;
     }
     if (!this.data.ticketId) {

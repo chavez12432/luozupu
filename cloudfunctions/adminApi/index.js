@@ -4,12 +4,291 @@
 const cloud = require('wx-server-sdk');
 const { buildEducationHonorLists } = require('./educationHonor');
 const { listZanyingyinSages, INTRO: SAGES_INTRO } = require('./zanyingyinHonor');
+const { ELITE_HEROES } = require('./eliteHeroes');
+const { withClanSurname } = require('./clanName');
 const {
   parseSpousesFromRemark,
   spousesToSpouseInfo,
   normalizeSpouseName,
   linkSameVillageSpouses
 } = require('./spouseParser');
+
+function looksLikeWifeName(name) {
+  const n = String(name || '').trim();
+  return !n || n.includes('氏');
+}
+
+/** 族人姓名冠「罗」，不产生「罗罗」；外姓（含氏）不加 */
+function clanifyPersonName(name) {
+  const n = String(name || '').trim();
+  if (!n || looksLikeWifeName(n)) return n;
+  return withClanSurname(n);
+}
+
+function clanifyMemberRow(m) {
+  if (!m) return m;
+  const next = Object.assign({}, m);
+  if (next.name) next.name = clanifyPersonName(next.name);
+  if (next.fatherName) next.fatherName = clanifyPersonName(next.fatherName);
+  if (next.motherName && !looksLikeWifeName(next.motherName)) {
+    next.motherName = clanifyPersonName(next.motherName);
+  }
+  return next;
+}
+
+/** 荣誉榜写入前清洗：去掉云库禁止/只读字段，避免 add/update 静默失败 */
+function sanitizeHonorWrite(data) {
+  const skip = new Set([
+    '_id', '_openid', 'createdAt', 'updatedAt',
+    'hasLink', 'paragraphs', 'titles', 'titleText', 'educations', 'birthText', 'dynastyEra',
+    'gongming', 'guanzhi', 'educationRaw', 'linkedMember'
+  ]);
+  const out = {};
+  if (!data || typeof data !== 'object') return out;
+  for (const [k, v] of Object.entries(data)) {
+    if (skip.has(k)) continue;
+    if (v === undefined) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+/** 各榜允许写入的字段（薄表：关联 + 荣誉特有；name 等作未关联兜底） */
+const HONOR_WRITE_FIELDS = {
+  patriarchs: [
+    'memberDocId', 'originalId', 'title', 'branchTitle', 'sortOrder', 'achievements',
+    'name', 'generation', 'branch', 'originRegion'
+  ],
+  sages: [
+    'memberDocId', 'originalId', 'achievements', 'dynasty', 'eraName',
+    'name', 'generation', 'birthYear', 'deathYear', 'sourceId'
+  ],
+  elite: [
+    'memberDocId', 'originalId', 'heroId', 'summary', 'biography', 'achievementType',
+    'sortOrder', 'position', 'organization', 'level', 'isAlive',
+    'name', 'generation', 'branch', 'birthYear'
+  ]
+};
+
+function pickHonorWriteFields(data, collection) {
+  const allowed = new Set(HONOR_WRITE_FIELDS[collection] || []);
+  const raw = sanitizeHonorWrite(data);
+  const out = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (allowed.has(k)) out[k] = v;
+  }
+  return out;
+}
+
+function getMemberBirthYear(member) {
+  const y = member && member.birthDate && member.birthDate.gregorian
+    ? member.birthDate.gregorian.year
+    : null;
+  return y != null && y !== '' ? Number(y) : null;
+}
+
+function getMemberGuanzhi(member) {
+  if (!member) return '';
+  if (member.guanzhi) return String(member.guanzhi);
+  if (Array.isArray(member.positions) && member.positions.length) {
+    return member.positions
+      .map(p => (typeof p === 'string' ? p : (p.title || '')))
+      .filter(Boolean)
+      .join('；');
+  }
+  return '';
+}
+
+/** 根据 memberDocId / originalId / 旧 memberId 批量拉取族人 */
+async function fetchMembersForHonorRows(rows) {
+  const byDocId = new Map();
+  const byOriginal = new Map();
+  const docIds = [];
+  const originalIds = [];
+
+  for (const row of rows || []) {
+    const docId = row.memberDocId || '';
+    const oid = row.originalId || row.memberId || '';
+    // 旧种子把 M#### 写在 memberDocId 上
+    const maybeOid = docId && /^[MC]\d+/i.test(String(docId)) ? String(docId) : '';
+    if (docId && !maybeOid) docIds.push(String(docId));
+    if (oid) originalIds.push(String(oid));
+    if (maybeOid) originalIds.push(maybeOid);
+  }
+
+  const uniqDoc = [...new Set(docIds.filter(Boolean))];
+  for (const id of uniqDoc) {
+    try {
+      const res = await db.collection('members').doc(id).get();
+      if (res && res.data) {
+        byDocId.set(id, res.data);
+        const o = res.data.originalId || res.data.memberId;
+        if (o) byOriginal.set(String(o), res.data);
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  const uniqOid = [...new Set(originalIds.filter(Boolean))];
+  const _ = db.command;
+  for (let i = 0; i < uniqOid.length; i += 20) {
+    const chunk = uniqOid.slice(i, i + 20);
+    try {
+      const res = await db.collection('members')
+        .where({ originalId: _.in(chunk) })
+        .limit(100)
+        .get();
+      for (const m of res.data || []) {
+        const o = m.originalId || m.memberId;
+        if (o) byOriginal.set(String(o), m);
+        if (m._id) byDocId.set(String(m._id), m);
+      }
+    } catch (_) {
+      try {
+        const res2 = await db.collection('members')
+          .where({ memberId: _.in(chunk) })
+          .limit(100)
+          .get();
+        for (const m of res2.data || []) {
+          const o = m.originalId || m.memberId;
+          if (o) byOriginal.set(String(o), m);
+          if (m._id) byDocId.set(String(m._id), m);
+        }
+      } catch (e2) { /* ignore */ }
+    }
+  }
+
+  return { byDocId, byOriginal };
+}
+
+function resolveMemberForHonorRow(row, maps) {
+  if (!row || !maps) return null;
+  const docId = row.memberDocId ? String(row.memberDocId) : '';
+  if (docId && maps.byDocId.has(docId)) return maps.byDocId.get(docId);
+  const oid = String(row.originalId || row.memberId || '');
+  if (oid && maps.byOriginal.has(oid)) return maps.byOriginal.get(oid);
+  if (docId && maps.byOriginal.has(docId)) return maps.byOriginal.get(docId);
+  return null;
+}
+
+/** 用族人资料覆盖荣誉行基础字段；成就/小传等荣誉特有字段保留 */
+function hydrateHonorFromMember(row, member) {
+  const out = Object.assign({}, row);
+  if (!member) {
+    if (out.name) out.name = clanifyPersonName(out.name);
+    out.hasLink = !!(out.memberDocId || out.originalId || out.memberId);
+    // 乡贤成就空时不硬造
+    return out;
+  }
+  out.memberDocId = member._id ? String(member._id) : (out.memberDocId || '');
+  out.originalId = member.originalId || member.memberId || out.originalId || '';
+  out.name = clanifyPersonName(member.name || out.name || '');
+  if (member.generation != null && member.generation !== '') out.generation = member.generation;
+  if (member.branch) out.branch = member.branch;
+  const by = getMemberBirthYear(member);
+  if (by != null) out.birthYear = by;
+  out.gongming = member.gongming || '';
+  out.guanzhi = getMemberGuanzhi(member);
+  // 乡贤：成就优先荣誉表，空则用功名
+  if (!out.achievements && out.gongming) out.achievements = out.gongming;
+  out.hasLink = !!out.memberDocId;
+  out.linkedMember = {
+    _id: out.memberDocId,
+    originalId: out.originalId,
+    name: out.name,
+    generation: out.generation,
+    branch: out.branch
+  };
+  return out;
+}
+
+async function hydrateHonorList(rows) {
+  const list = rows || [];
+  if (!list.length) return [];
+  const maps = await fetchMembersForHonorRows(list);
+  return list.map(row => hydrateHonorFromMember(row, resolveMemberForHonorRow(row, maps)));
+}
+
+/** 写入前：若有 memberDocId，自动补 originalId，并可选同步兜底 name */
+async function enrichHonorLinkFields(payload) {
+  const out = Object.assign({}, payload);
+  if (out.memberDocId) {
+    try {
+      const res = await db.collection('members').doc(String(out.memberDocId)).get();
+      const m = res && res.data;
+      if (m) {
+        out.originalId = m.originalId || m.memberId || out.originalId || '';
+        if (!out.name && m.name) out.name = clanifyPersonName(m.name);
+        if (out.generation == null && m.generation != null) out.generation = m.generation;
+        if (!out.branch && m.branch) out.branch = m.branch;
+      }
+    } catch (_) { /* ignore */ }
+  } else if (out.originalId || out.memberId) {
+    const oid = String(out.originalId || out.memberId);
+    out.originalId = oid;
+    try {
+      const res = await db.collection('members').where({ originalId: oid }).limit(1).get();
+      const m = (res.data && res.data[0]) || null;
+      if (m) {
+        out.memberDocId = String(m._id);
+        if (!out.name && m.name) out.name = clanifyPersonName(m.name);
+        if (out.generation == null && m.generation != null) out.generation = m.generation;
+        if (!out.branch && m.branch) out.branch = m.branch;
+      }
+    } catch (_) { /* ignore */ }
+  }
+  delete out.memberId;
+  return out;
+}
+
+function docIdFromAddResult(result) {
+  return (result && (result._id || result.id)) || '';
+}
+
+function isCollectionMissingError(err) {
+  const msg = String((err && (err.message || err.errMsg || err)) || '');
+  const code = err && (err.errCode || err.code);
+  return (
+    code === -502005 ||
+    code === 'DATABASE_COLLECTION_NOT_EXIST' ||
+    /collection not exists|Db or Table not exist|DATABASE_COLLECTION_NOT_EXIST|-502005/i.test(msg)
+  );
+}
+
+/** 确保荣誉相关集合存在（云库未建表时 count/get 会报 -502005） */
+async function ensureCollection(name) {
+  try {
+    await db.createCollection(name);
+    console.log('已创建集合:', name);
+    return true;
+  } catch (e) {
+    // 已存在或其他可忽略错误
+    if (!isCollectionMissingError(e)) {
+      console.log('createCollection', name, e.message || e);
+    }
+    return false;
+  }
+}
+
+async function ensureHonorCollections() {
+  for (const col of ['patriarchs', 'sages', 'elite', 'graduates']) {
+    await ensureCollection(col);
+  }
+}
+
+async function safeCollectionCount(collectionName, where = null) {
+  try {
+    let query = db.collection(collectionName);
+    if (where && Object.keys(where).length) query = query.where(where);
+    const res = await query.count();
+    return res.total || 0;
+  } catch (err) {
+    if (isCollectionMissingError(err)) {
+      await ensureCollection(collectionName);
+      return 0;
+    }
+    throw err;
+  }
+}
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
@@ -140,6 +419,8 @@ exports.main = async (event, context) => {
         return await deleteElite(paramsData);
       case 'resetEliteHeroes':
         return await resetEliteHeroes();
+      case 'migrateHonorMemberLinks':
+        return await migrateHonorMemberLinks(params);
       // 学历榜相关操作
       case 'listEducationHonor':
         return await listEducationHonor(params);
@@ -191,6 +472,8 @@ exports.main = async (event, context) => {
         return await cleanAllWithoutId();
       case 'fixMemberIds':
         return await fixMemberIds();
+      case 'fixClanSurnames':
+        return await fixClanSurnames(params);
       case 'fixWifesSpouseId':
         return await fixWifesSpouseId();
       case 'fixSonsSpouseId':
@@ -200,6 +483,8 @@ exports.main = async (event, context) => {
       // 运营：登录账号 / 开发者留言
       case 'listAccounts':
         return await listAccounts(params);
+      case 'forceUnbindAccount':
+        return await forceUnbindAccount(paramsData || params);
       case 'listDevMessages':
         return await listDevMessages(params);
       case 'markDevMessageRead':
@@ -485,19 +770,32 @@ async function batchImportMembers(members) {
   };
 }
 
-// 清空所有数据
+// 分页清空人员三集合（members / wives / sons_in_law），保留其它集合
 async function clearAllMembers() {
-  const { data } = await db.collection('members').get();
-  
-  const deletePromises = data.map(doc => {
-    return db.collection('members').doc(doc._id).remove();
-  });
-  
-  await Promise.all(deletePromises);
-  
+  const collections = ['members', 'wives', 'sons_in_law'];
+  const MAX_LIMIT = 100;
+  const details = {};
+  let deletedCount = 0;
+
+  for (const name of collections) {
+    let deleted = 0;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { data } = await db.collection(name).limit(MAX_LIMIT).get();
+      if (!data || data.length === 0) break;
+      await Promise.all(data.map(doc => db.collection(name).doc(doc._id).remove()));
+      deleted += data.length;
+      if (data.length < MAX_LIMIT) break;
+    }
+    details[name] = deleted;
+    deletedCount += deleted;
+  }
+
   return {
     success: true,
-    deletedCount: data.length
+    deletedCount,
+    details,
+    message: `已清空人员三集合，共 ${deletedCount} 条（未动序文/年号/荣誉/认证）`
   };
 }
 
@@ -894,202 +1192,480 @@ async function listPatriarchs(params) {
   const { branch, page = 1, pageSize = 100 } = params;
   const where = {};
   if (branch) where.branch = branch;
-  
-  const countResult = await db.collection('patriarchs').where(where).count();
-  const total = countResult.total;
-  
-  const { data } = await db.collection('patriarchs')
-    .where(where)
-    .orderBy('sortOrder', 'asc')
-    .skip((page - 1) * pageSize)
-    .limit(pageSize)
-    .get();
-  
-  return { success: true, data, total };
-}
 
-async function getPatriarch(data) {
-  const { _id } = data;
-  const { data: item } = await db.collection('patriarchs').doc(_id).get();
-  return { success: true, data: item };
-}
+  const total = await safeCollectionCount('patriarchs', where);
 
-async function createPatriarch(data) {
-  const result = await db.collection('patriarchs').add({
-    data: { ...data, createdAt: db.serverDate(), updatedAt: db.serverDate() }
-  });
-  return { success: true, data: { _id: result._id } };
-}
-
-async function updatePatriarch(data) {
-  const { _id, ...updateData } = data;
-  await db.collection('patriarchs').doc(_id).update({
-    data: { ...updateData, updatedAt: db.serverDate() }
-  });
-  return { success: true, message: '更新成功' };
-}
-
-async function deletePatriarch(data) {
-  await db.collection('patriarchs').doc(data._id).remove();
-  return { success: true, message: '删除成功' };
-}
-
-// 乡贤列表（簪缨引）
-async function listSages(params) {
-  const { dynasty, page = 1, pageSize = 100 } = params;
-  const all = listZanyingyinSages(dynasty || null);
-  const list = all.slice((page - 1) * pageSize, page * pageSize);
-  return {
-    success: true,
-    data: list,
-    total: all.length,
-    intro: SAGES_INTRO
-  };
-}
-
-async function getSage(data) {
-  const { data: item } = await db.collection('sages').doc(data._id).get();
-  return { success: true, data: item };
-}
-
-async function createSage(data) {
-  const result = await db.collection('sages').add({
-    data: { ...data, createdAt: db.serverDate(), updatedAt: db.serverDate() }
-  });
-  return { success: true, data: { _id: result._id } };
-}
-
-async function updateSage(data) {
-  const { _id, ...updateData } = data;
-  await db.collection('sages').doc(_id).update({
-    data: { ...updateData, updatedAt: db.serverDate() }
-  });
-  return { success: true, message: '更新成功' };
-}
-
-async function deleteSage(data) {
-  await db.collection('sages').doc(data._id).remove();
-  return { success: true, message: '删除成功' };
-}
-
-// 群英列表
-async function listElite(params) {
-  const { achievementType, page = 1, pageSize = 100 } = params;
-  const where = {};
-  if (achievementType) where.achievementType = achievementType;
-  
-  const countResult = await db.collection('elite').where(where).count();
-  const total = countResult.total;
-  
   let data = [];
   try {
-    const result = await db.collection('elite')
+    const res = await db.collection('patriarchs')
       .where(where)
       .orderBy('sortOrder', 'asc')
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .get();
-    data = result.data;
+    data = res.data || [];
   } catch (e) {
-    // 旧数据可能无 sortOrder 索引，回退按世代
+    if (isCollectionMissingError(e)) {
+      await ensureCollection('patriarchs');
+      data = [];
+    } else {
+      try {
+        const res = await db.collection('patriarchs')
+          .where(where)
+          .skip((page - 1) * pageSize)
+          .limit(pageSize)
+          .get();
+        data = res.data || [];
+      } catch (e2) {
+        if (isCollectionMissingError(e2)) {
+          await ensureCollection('patriarchs');
+          data = [];
+        } else throw e2;
+      }
+    }
+  }
+
+  return {
+    success: true,
+    data: await hydrateHonorList(data),
+    total
+  };
+}
+
+async function getPatriarch(data) {
+  if (!data || !data._id) return { success: false, message: '缺少族长 ID' };
+  try {
+    const { data: item } = await db.collection('patriarchs').doc(data._id).get();
+    if (!item) return { success: false, message: '未找到该族长' };
+    const [hydrated] = await hydrateHonorList([item]);
+    return { success: true, data: hydrated };
+  } catch (err) {
+    return { success: false, message: err.message || '读取失败' };
+  }
+}
+
+async function createPatriarch(data) {
+  try {
+    await ensureCollection('patriarchs');
+    let payload = pickHonorWriteFields(data, 'patriarchs');
+    payload = await enrichHonorLinkFields(payload);
+    if (payload.name) payload.name = clanifyPersonName(payload.name);
+    if (!payload.memberDocId && !payload.name) {
+      return { success: false, message: '请选择族人或填写姓名' };
+    }
+    const result = await db.collection('patriarchs').add({
+      data: { ...payload, createdAt: db.serverDate(), updatedAt: db.serverDate() }
+    });
+    return { success: true, data: { _id: docIdFromAddResult(result) }, message: '创建成功' };
+  } catch (err) {
+    console.error('createPatriarch', err);
+    return { success: false, message: err.message || '创建失败' };
+  }
+}
+
+async function updatePatriarch(data) {
+  try {
+    const _id = data && data._id;
+    if (!_id) return { success: false, message: '缺少族长 ID' };
+    let payload = pickHonorWriteFields(data, 'patriarchs');
+    payload = await enrichHonorLinkFields(payload);
+    if (payload.name) payload.name = clanifyPersonName(payload.name);
+    await db.collection('patriarchs').doc(_id).update({
+      data: { ...payload, updatedAt: db.serverDate() }
+    });
+    return { success: true, message: '更新成功' };
+  } catch (err) {
+    console.error('updatePatriarch', err);
+    return { success: false, message: err.message || '更新失败' };
+  }
+}
+
+async function deletePatriarch(data) {
+  if (!data || !data._id) return { success: false, message: '缺少族长 ID' };
+  try {
+    await db.collection('patriarchs').doc(data._id).remove();
+    return { success: true, message: '删除成功' };
+  } catch (err) {
+    return { success: false, message: err.message || '删除失败' };
+  }
+}
+
+// 乡贤列表：以云库 sages 为准；空库时从簪缨引种子导入
+async function seedSagesFromZanyingyin() {
+  await ensureCollection('sages');
+  const seeds = listZanyingyinSages(null) || [];
+  let added = 0;
+  for (const item of seeds) {
+    const name = clanifyPersonName(item.name);
+    let existTotal = 0;
+    try {
+      const exist = await db.collection('sages')
+        .where({ name, generation: item.generation || 0 })
+        .count();
+      existTotal = exist.total;
+    } catch (e) {
+      if (isCollectionMissingError(e)) {
+        await ensureCollection('sages');
+        existTotal = 0;
+      } else throw e;
+    }
+    if (existTotal > 0) continue;
+    await db.collection('sages').add({
+      data: {
+        name,
+        generation: item.generation || null,
+        dynasty: item.dynasty || '',
+        achievements: item.achievements || '',
+        memberDocId: item.memberDocId || '',
+        sourceId: item._id || '',
+        createdAt: db.serverDate(),
+        updatedAt: db.serverDate()
+      }
+    });
+    added++;
+  }
+  return added;
+}
+
+async function listSages(params) {
+  const { dynasty, page = 1, pageSize = 100 } = params;
+  const pageNum = Math.max(1, Number(page) || 1);
+  const size = Math.min(200, Math.max(1, Number(pageSize) || 100));
+
+  let total = await safeCollectionCount('sages');
+  if (total === 0) {
+    await seedSagesFromZanyingyin();
+    total = await safeCollectionCount('sages');
+  }
+
+  const where = {};
+  if (dynasty) where.dynasty = dynasty;
+
+  let query = db.collection('sages').where(where);
+  try {
+    const countResult = await query.count();
+    total = countResult.total;
+  } catch (e) {
+    if (isCollectionMissingError(e)) {
+      await ensureCollection('sages');
+      total = 0;
+    } else throw e;
+  }
+
+  let data = [];
+  try {
+    const res = await query
+      .orderBy('generation', 'asc')
+      .skip((pageNum - 1) * size)
+      .limit(size)
+      .get();
+    data = res.data || [];
+  } catch (e) {
+    if (isCollectionMissingError(e)) {
+      await ensureCollection('sages');
+      data = [];
+    } else {
+      const res = await query.skip((pageNum - 1) * size).limit(size).get();
+      data = res.data || [];
+    }
+  }
+
+  const hydrated = await hydrateHonorList(data);
+  const list = hydrated.map(item => ({
+    _id: item._id,
+    name: item.name,
+    generation: item.generation,
+    dynasty: item.dynasty || '',
+    achievements: item.achievements || item.gongming || '',
+    gongming: item.gongming || '',
+    guanzhi: item.guanzhi || '',
+    memberDocId: item.memberDocId || '',
+    originalId: item.originalId || '',
+    hasLink: !!item.hasLink,
+    birthYear: item.birthYear || '',
+    deathYear: item.deathYear || '',
+    eraName: item.eraName || ''
+  }));
+
+  return {
+    success: true,
+    data: list,
+    total,
+    page: pageNum,
+    pageSize: size,
+    intro: SAGES_INTRO
+  };
+}
+
+async function getSage(data) {
+  if (!data || !data._id) return { success: false, message: '缺少乡贤 ID' };
+  try {
+    const { data: item } = await db.collection('sages').doc(data._id).get();
+    if (!item) return { success: false, message: '未找到该乡贤' };
+    const [hydrated] = await hydrateHonorList([item]);
+    return { success: true, data: hydrated };
+  } catch (err) {
+    return { success: false, message: err.message || '读取失败' };
+  }
+}
+
+async function createSage(data) {
+  try {
+    await ensureCollection('sages');
+    let payload = pickHonorWriteFields(data, 'sages');
+    payload = await enrichHonorLinkFields(payload);
+    if (payload.name) payload.name = clanifyPersonName(payload.name);
+    if (!payload.memberDocId && !payload.name) {
+      return { success: false, message: '请选择族人或填写姓名' };
+    }
+    if (payload.achievements == null) payload.achievements = '';
+    const result = await db.collection('sages').add({
+      data: { ...payload, createdAt: db.serverDate(), updatedAt: db.serverDate() }
+    });
+    return { success: true, data: { _id: docIdFromAddResult(result) }, message: '创建成功' };
+  } catch (err) {
+    console.error('createSage', err);
+    return { success: false, message: err.message || '创建失败' };
+  }
+}
+
+async function updateSage(data) {
+  try {
+    const _id = data && data._id;
+    if (!_id) return { success: false, message: '缺少乡贤 ID' };
+    let payload = pickHonorWriteFields(data, 'sages');
+    payload = await enrichHonorLinkFields(payload);
+    if (payload.name) payload.name = clanifyPersonName(payload.name);
+    if (data && Object.prototype.hasOwnProperty.call(data, 'achievements')) {
+      payload.achievements = data.achievements == null ? '' : String(data.achievements);
+    }
+    await db.collection('sages').doc(_id).update({
+      data: { ...payload, updatedAt: db.serverDate() }
+    });
+    return { success: true, message: '更新成功' };
+  } catch (err) {
+    console.error('updateSage', err);
+    return { success: false, message: err.message || '更新失败' };
+  }
+}
+
+async function deleteSage(data) {
+  if (!data || !data._id) return { success: false, message: '缺少乡贤 ID' };
+  try {
+    await db.collection('sages').doc(data._id).remove();
+    return { success: true, message: '删除成功' };
+  } catch (err) {
+    return { success: false, message: err.message || '删除失败' };
+  }
+}
+
+// 群英列表
+async function listElite(params) {
+  const { achievementType, page = 1, pageSize = 100 } = params || {};
+  const pageNum = Math.max(1, Number(page) || 1);
+  const size = Math.min(200, Math.max(1, Number(pageSize) || 100));
+  const where = {};
+  if (achievementType) where.achievementType = achievementType;
+
+  let total = await safeCollectionCount('elite', where);
+  // 集合不存在或空库时写入当今族人撷英七人
+  if (total === 0 && !achievementType) {
+    await resetEliteHeroes();
+    total = await safeCollectionCount('elite');
+  }
+
+  let data = [];
+  try {
     const result = await db.collection('elite')
       .where(where)
-      .orderBy('generation', 'asc')
-      .skip((page - 1) * pageSize)
-      .limit(pageSize)
+      .orderBy('sortOrder', 'asc')
+      .skip((pageNum - 1) * size)
+      .limit(size)
       .get();
-    data = result.data;
+    data = result.data || [];
+  } catch (e) {
+    if (isCollectionMissingError(e)) {
+      await ensureCollection('elite');
+      if (!achievementType) {
+        await resetEliteHeroes();
+        total = await safeCollectionCount('elite');
+      }
+      try {
+        const result = await db.collection('elite')
+          .where(where)
+          .skip((pageNum - 1) * size)
+          .limit(size)
+          .get();
+        data = result.data || [];
+      } catch (e2) {
+        data = [];
+      }
+    } else {
+      try {
+        const result = await db.collection('elite')
+          .where(where)
+          .orderBy('generation', 'asc')
+          .skip((pageNum - 1) * size)
+          .limit(size)
+          .get();
+        data = result.data || [];
+      } catch (e2) {
+        if (isCollectionMissingError(e2)) {
+          await ensureCollection('elite');
+          data = [];
+        } else {
+          const result = await db.collection('elite')
+            .where(where)
+            .skip((pageNum - 1) * size)
+            .limit(size)
+            .get();
+          data = result.data || [];
+        }
+      }
+    }
   }
-  
-  return { success: true, data, total };
+
+  const hydrated = await hydrateHonorList(data);
+  return {
+    success: true,
+    data: hydrated,
+    total,
+    page: pageNum,
+    pageSize: size
+  };
 }
 
 async function getElite(data) {
-  const { data: item } = await db.collection('elite').doc(data._id).get();
-  return { success: true, data: item };
+  let item = null;
+  if (data && data._id) {
+    const res = await db.collection('elite').doc(data._id).get().catch(() => null);
+    item = res && res.data;
+  }
+  if (!item && data && data.heroId) {
+    const res = await db.collection('elite').where({ heroId: data.heroId }).limit(1).get();
+    item = (res.data && res.data[0]) || null;
+  }
+  if (!item) return { success: false, message: '未找到该群英' };
+  const [hydrated] = await hydrateHonorList([item]);
+  if (!hydrated.paragraphs && hydrated.biography) {
+    hydrated.paragraphs = String(hydrated.biography).split(/\n\n+/).filter(Boolean);
+  }
+  return { success: true, data: hydrated };
 }
 
 async function createElite(data) {
-  const result = await db.collection('elite').add({
-    data: { ...data, createdAt: db.serverDate(), updatedAt: db.serverDate() }
-  });
-  return { success: true, data: { _id: result._id } };
+  try {
+    await ensureCollection('elite');
+    let payload = pickHonorWriteFields(data, 'elite');
+    payload = await enrichHonorLinkFields(payload);
+    if (payload.name) payload.name = clanifyPersonName(payload.name);
+    if (!payload.memberDocId && !payload.name) {
+      return { success: false, message: '请选择族人或填写姓名' };
+    }
+    if (payload.summary == null) payload.summary = '';
+    if (payload.biography == null) payload.biography = '';
+    const result = await db.collection('elite').add({
+      data: { ...payload, createdAt: db.serverDate(), updatedAt: db.serverDate() }
+    });
+    return { success: true, data: { _id: docIdFromAddResult(result) }, message: '创建成功' };
+  } catch (err) {
+    console.error('createElite', err);
+    return { success: false, message: err.message || '创建失败' };
+  }
 }
 
 async function updateElite(data) {
-  const { _id, ...updateData } = data;
-  await db.collection('elite').doc(_id).update({
-    data: { ...updateData, updatedAt: db.serverDate() }
-  });
-  return { success: true, message: '更新成功' };
+  try {
+    const _id = data && data._id;
+    if (!_id) return { success: false, message: '缺少群英 ID' };
+    let payload = pickHonorWriteFields(data, 'elite');
+    payload = await enrichHonorLinkFields(payload);
+    if (payload.name) payload.name = clanifyPersonName(payload.name);
+    if (data && Object.prototype.hasOwnProperty.call(data, 'summary')) {
+      payload.summary = data.summary == null ? '' : String(data.summary);
+    }
+    if (data && Object.prototype.hasOwnProperty.call(data, 'biography')) {
+      payload.biography = data.biography == null ? '' : String(data.biography);
+    }
+    await db.collection('elite').doc(_id).update({
+      data: { ...payload, updatedAt: db.serverDate() }
+    });
+    return { success: true, message: '更新成功' };
+  } catch (err) {
+    console.error('updateElite', err);
+    return { success: false, message: err.message || '更新失败' };
+  }
 }
 
 async function deleteElite(data) {
-  await db.collection('elite').doc(data._id).remove();
-  return { success: true, message: '删除成功' };
+  if (!data || !data._id) return { success: false, message: '缺少群英 ID' };
+  try {
+    await db.collection('elite').doc(data._id).remove();
+    return { success: true, message: '删除成功' };
+  } catch (err) {
+    return { success: false, message: err.message || '删除失败' };
+  }
 }
 
-/** 当今族人撷英（七人），清空旧职位关联名单后重新写入 */
-const ELITE_HEROES_SEED = [
-  {
-    id: 'xiangwen', name: '相文', branch: '明儒堂', generation: 35, birthYear: 1968,
-    summary: '明儒堂三十五世，江西省委宣传部办公室副调研员',
-    achievementType: '政务', position: '副调研员', organization: '中共江西省委宣传部办公室',
-    biography: '明儒堂三十五世相文，生于1968年5月26日。自幼勤奋好学，在高洲小学、洋门中学分别读完小学、初中后于1985年考入江西省永新师范，参加工作后又先后就读于江西省吉安教育学院、中共江西省委党校理论班。\n\n1988年7月从永新师范毕业后参加工作，在洋门中学任教并兼任团委书记；1992年3月调安福县江南乡政府工作，同年8月调中共安福县委统战部工作；1996年9月调中共吉安地委宣传部任副主任科员，2001年任中共吉安市委宣传部主任科员、办公室主任；2005年11月调中共江西省委宣传部任办公室主任科员、副调研员（副县级）。\n\n相文自参加工作以来，一直积极进取，努力工作，勤于写作，在国家和省、市级报刊上发表文章50多篇，并多次获得“优秀公务员”和“优秀共产党员”称号。\n\n相文支持续修族谱，主动捐款壹仟元。'
-  },
-  {
-    id: 'chuanfang', name: '传芳', branch: '忠爱堂', generation: 33, birthYear: 1943,
-    summary: '忠爱堂三十三世，原樟树市农业生产资料公司经理',
-    achievementType: '军事', position: '经理、党支部书记', organization: '江西樟树市农业生产资料公司',
-    biography: '忠爱堂三十三世传芳，生于1943年7月17日午时，从小读书，1963年12月加入中国共产主义青年团，1964年应征入伍，光荣参加中国人民解放军，1965年评为五好战士，表现突出，1967年3月加入中国共产党，成为一名光荣的共产党员。在部队大熔炉里得到了锻炼和培养，提交了思想觉悟，增强了工作能力，1969年3月任命为福州军区独立师三营十一连二排排长、连党支部委员。71年1月荣升为副连长，同年10月提升为连长、党支部书记，77年12月提升为福州军区独立二师六团营长、营党支部书记。十多年的部队生活，在部队首长的教导下，认真看书学习，业绩明显，多次受到奖励。1981年转业，分配在江西樟树市农业生产资料公司任经理、党支部书记，在新的工作岗位上，勤奋工作，带头维护党的团结和国家利益，带领职工为党和国家作出了较大的贡献。2003年从领导岗位上退下来，保持本色，做一个好党员、好公民。\n\n家乡续修族谱，积极支持，捐款壹仟元。'
-  },
-  {
-    id: 'jianxin', name: '建新', branch: '明儒堂', generation: 35, birthYear: null,
-    summary: '明儒堂三十五世，深圳博民科技有限公司负责人',
-    achievementType: '企业', position: '负责人', organization: '深圳博民科技有限公司',
-    biography: '祖籍修谱，全家欣慰，远离故土，徙居他乡的我们终有个归属记载的地方。六十六年前父亲三香约十岁，我单身祖母，为父亲躲避抓壮丁，带着他东躲西藏，甚至还改名叫海香。从1942年中秋节过后的一个夜晚离开家，到1946年上半年，三年多时间，背井离乡、漂泊生活，曾借宿嘉溪染布店、诸桥洋鸭里、廖家、白塘等地，祖母帮人家舂米洗衣服当佣人，母子艰难度日。父亲说：在那特定的历史时期，因内战需要兵源，当时乡公所还经常到处寻找着他们，无奈之下，在1946年端午节后的某一天，十多岁的父亲跟随白塘村姑表兄朱芹善，从家乡步行，经永新县介化垅、湖南茶陵、桂阳、道县到达广西灌阳县文市镇西街一个叫慎记杂货店当学徒，次后随该店搬迁，到全州县城湘山街改为德兴隆杂货店继续当学徒。\n\n1949年12月人民解放军解放全州，1950年县成立工会，父亲即加入了工会。于1952年7月8日经县工会介绍，进县油脂公司工作。1953年1月5日加入共青团，1955年元月28日加入中国共产党。在参加工作期间，组织上曾分别派他去桂林地委干校，桂林财贸干校学习，曾历任全州县绍水油脂公司营业处副主任、粮管所副所长；两河粮管所营业员、保管组长、政治指导员、党支部书记，1993年1月退休。在单位工作的四十多年间，曾受过各种奖项23次，三次被评为优秀共产党员。在家里是一位慈祥而高尚的父亲，为了我们六个儿女，以至孙儿孙女的成长与母亲一道同艰共苦、任劳任怨、全心全意付出了一生全部心血。我母亲于1987年逝世了，父亲今年已77岁，听说家乡续修族谱，就欣然捐款1000元人民币，以表示赞助。我借此谱碟一页，祝他老人家越老越康，长命百岁！也愿我们做儿女的珍惜长辈们晚年这有限时光，能孝道就要尽力去孝道，时过后悔是回不来的，它将会使你遗憾一生。\n\n居住广西壮族自治区全州县粮油综合厂\n三十五世孙广西财经学院本科生深圳\n博民科技有限公司负责人 建新谨撰\n2008年6月18日 吉旦'
-  },
-  {
-    id: 'guocai', name: '国才', branch: '德裕堂', generation: 34, birthYear: 1942,
-    summary: '德裕堂三十四世，原省轻工业厅直属技工学校党委书记、校长',
-    achievementType: '教育', position: '党委书记兼校长', organization: '江西省轻工业厅直属技工学校',
-    biography: '德裕堂第三十四世国才，生于1942年7月3日。1950年至1962年先后在高洲初小、上城高小、安福初中、永新师范就读毕业。1990年至1993年在职函授大专毕业。1962年8月参加工作，在上城小学任教，热爱教育事业，工作任劳任怨，连续三年评为优秀教师。\n\n1964年12月应征入伍，独子当兵，全家光荣。在部队表现突出，1965年10月入党，任班长，1967年初破格提升为排长，1967年底提升为连队政治指导员，任职期间分别评为先进班、先进排和先进连。1969年底调师部任秘书、军区首长秘书、军直政治工作处处长（正团级），工作积极，先后多次受到师、军、军区嘉奖并评为先进工作者。在这段时间，父母先后重病去世，正好部队担负紧急战备任务，出于服从大局都未回家尽孝，正是忠于党和军队的事业，忠孝难两全。\n\n1985年底，服从全军一盘棋，精简整编，光荣转业，安排在江西省轻工业厅直属技工学校任党委书记兼校长（正县级）。在校任职时团结班子、带领教工、严谨治校、规模扩大，成为国家重点高级技校。善于思想政治工作，注重思想工作研究，曾在全国轻工教育学会任理事、机电教学研究会会长，先后二十多篇论文在年会、报刊上发表，获全国轻工教育论文奖五篇。\n\n他关注家乡，捐款1000元支持七次续修族谱，还捐款修下里桥和高洲村水泥路。'
-  },
-  {
-    id: 'decai', name: '德才', branch: '德裕堂', generation: 34, birthYear: 1971,
-    summary: '德裕堂三十四世，洲湖镇党委书记、人大主席',
-    achievementType: '政务', position: '镇党委书记、人大主席', organization: '安福县洲湖镇',
-    biography: '德裕堂三十四世德才，生于1971年6月4日。在高洲小学、洋门中学读完小学、初中，1986年考入永新师范，三年完成学业参加工作。工作期间坚持自学，参加江西大学中文系自学考试，大专毕业，之后又参加中央党校函授法律系大学毕业。\n\n1989年7月永新师范毕业，分配在洋门乡上街小学教书。1991年调洋门中学、彭坊中学教书，先后任工会主席、政教处主任。1996年8月参加安福县公务员招录考试，录用在中共安福县委组织部工作，先后任科员、副科级组织员、组织部副部长兼农村基层组织建设办公室主任、县直机关工委副书记。2006年7月调洲湖镇任镇党委书记、人大主席。2006年初当选中共安福县委委员，当选中国共产党江西省第十二次代表大会代表，出席2006年12月召开的江西省第十二次党代会。\n\n德才热爱家乡，捐款2000元，想方设法筹资6000元支持下里桥建设，热心赞助1000元支持续修族谱。'
-  },
-  {
-    id: 'qingliang', name: '庆良', branch: '德裕堂', generation: 35, birthYear: 1940,
-    summary: '德裕堂三十五世，原峡江县委常委、组织部部长',
-    achievementType: '政务', position: '县委常委、组织部部长', organization: '中共峡江县委',
-    biography: '德裕堂三十五世庆良，生于1940年10月24日（岁次庚辰九月二十四日）。自小就读于高洲初级小学、上城小学、安福初级中学，1958年保送进吉安师范读书。工作期间自学深圳大学行政管理并结业。\n\n1960年8月吉安师范提前一年毕业，选派到吉安市禾埠小学工作，任教导主任。1962年1月8日加入中国共产党，成为一名中国共产党党员。1968年底筹办禾埠高中，后改名为禾埠共产主义劳动大学，任校革命委员会副主任，之后恢复禾埠中学校名，任校长，1978年4月任禾埠辅导区主任。在教育战线工作22年，多次评为先进个人，1962年评为吉安市先进工作者，1973年评为吉安市教育系统标兵。\n\n1982年9月调中共吉安市委组织部任主办干事、组织员办公室主任、组织部副部长。1991年9月调峡江县任中共峡江县委常委、组织部部长。1997年5月调回吉安市任副县级调研员，直至2000年12月退休。期间从事党建工作16年，在吉安市工作时，总结推广党员活动日制度，编写发展党员工作程序和民主评议党员程序等，中共吉安地委组织部在全区推广；在峡江工作时，配合县委加强农村基层组织建设，加快村级经济发展有成效，中共吉安地委组织部带领各县（市）委组织部部长参观学习，中共吉安地委书记亲自组织各县（市）委书记等近100人，参观峡江村级党建工作。撰写十多篇文章在党报、党刊上发表，连续多年评为《江西党建》优秀通讯员。1985年、1986年、1988年分别评为吉安市优秀党员，1989年至1991年连续三年评为吉安市优秀党务工作者，1995年中共吉安地委授予优秀党务工作者称号。\n\n庆良热爱家乡，率先倡议七修高洲罗氏族谱，组织并参与具体工作，为续修族谱和新修下里桥、修高洲村水泥路都各捐款壹仟元。'
-  },
-  {
-    id: 'zhijian', name: '志坚', branch: '德裕堂', generation: 36, birthYear: 1965,
-    summary: '德裕堂三十六世，原中国联通赣州分公司总经理',
-    achievementType: '企业', position: '总经理', organization: '中国联通赣州分公司',
-    biography: '德裕堂三十六世志坚（现名坚），1965年7月3日生于吉安市，1982年吉安二中高中毕业，考入江西工学院（现南昌大学）无线电专业，1986年大学毕业，获工学学士学位。\n\n服从组织分配，在吉安地区邮电局参与微波站筹建工作，1989年度荣获共青团吉安地委授予“全区优秀共青团员”称号，1991年被评聘为工程师，1997年任吉安地区邮电局运维部副主任（主持工作），1997年被国家邮电部电信总局、中国邮电工会全国委员会联合授予“长途来话接通率竞赛优秀个人”，1998年任峡江县电信局局长，1999年电信分离移动通信，任吉安地区移动通信公司党委委员、市场部主任。\n\n2000年初应聘为中国联通吉安分公司副总经理（主持工作），负责中国联通吉安分公司的筹建工作，因业绩突出2000年底任命为总经理（正县级待遇），同年获得高级工程师职称。2001年—2003年接受澳大利亚堪培拉大学MBA在职教育，获MBA硕士学位。2003年荣获中国联通总部党组织授予“优秀共产党员称号”，并将所学的知识用于指导工作，强化企业管理，向管理要效益，工作期间先后发表了许多论文，其中《青苹果、红苹果》，《薪酬积分制，员工效益增》等论文，分别获中国联通总部“创新成果优秀奖”。2005年被江西省质量协会评为“江西省用户满意活动卓越领导者”，同年被中国联通总部评为“合理化建议先进个人”。\n\n2005年底调中国联通赣州分公司任总经理，深入调研，开拓市场，改善服务，经济效益提高，2007年评为赣州市第十三届“十大杰出青年”，2008年荣获赣州市“五一劳动奖章”。\n\n志坚关心家乡，无论是修下里桥，还是修高洲村水泥路都热心赞助，分别捐款2000元和3200元，对七次续修族谱积极支持，捐款1200元。'
-  }
-];
+/** 当今族人撷英（七人）：与 eliteHeroes.js 同源，姓名统一冠「罗」 */
+const ELITE_SEED_META = {
+  xiangwen: { achievementType: '政务', position: '副调研员', organization: '中共江西省委宣传部办公室' },
+  chuanfang: { achievementType: '军事', position: '经理、党支部书记', organization: '江西樟树市农业生产资料公司' },
+  jianxin: { achievementType: '企业', position: '负责人', organization: '深圳博民科技有限公司' },
+  guocai: { achievementType: '教育', position: '党委书记兼校长', organization: '江西省轻工业厅直属技工学校' },
+  decai: { achievementType: '政务', position: '镇党委书记、人大主席', organization: '安福县洲湖镇' },
+  qingliang: { achievementType: '政务', position: '县委常委、组织部部长', organization: '中共峡江县委' },
+  zhijian: { achievementType: '企业', position: '总经理', organization: '中国联通赣州分公司' }
+};
+
+const ELITE_HEROES_SEED = ELITE_HEROES.map((h) => {
+  const meta = ELITE_SEED_META[h.id] || {};
+  return {
+    id: h.id,
+    name: clanifyPersonName(h.name),
+    branch: h.branch,
+    generation: h.generation,
+    birthYear: h.birthYear,
+    summary: h.summary,
+    achievementType: meta.achievementType || '',
+    position: meta.position || '',
+    organization: meta.organization || '',
+    biography: (h.paragraphs || []).join('\n\n')
+  };
+});
 
 async function resetEliteHeroes() {
-  // 清空原有关联人员
+  await ensureCollection('elite');
+
+  // 清空原有关联人员（集合刚创建时跳过）
   const batchSize = 100;
   let removed = 0;
-  while (true) {
-    const { data } = await db.collection('elite').limit(batchSize).get();
-    if (!data.length) break;
-    await Promise.all(data.map(item => db.collection('elite').doc(item._id).remove()));
-    removed += data.length;
+  try {
+    while (true) {
+      const { data } = await db.collection('elite').limit(batchSize).get();
+      if (!data.length) break;
+      await Promise.all(data.map(item => db.collection('elite').doc(item._id).remove()));
+      removed += data.length;
+    }
+  } catch (err) {
+    if (!isCollectionMissingError(err)) throw err;
+    await ensureCollection('elite');
   }
 
-  // 写入当今族人撷英七人
+  // 写入当今族人撷英七人（尽量按姓名关联族人）
   let added = 0;
   for (let i = 0; i < ELITE_HEROES_SEED.length; i++) {
     const hero = ELITE_HEROES_SEED[i];
+    let memberDocId = '';
+    let originalId = '';
+    try {
+      const found = await db.collection('members').where({ name: hero.name }).limit(1).get();
+      const m = found.data && found.data[0];
+      if (m) {
+        memberDocId = String(m._id);
+        originalId = m.originalId || m.memberId || '';
+      }
+    } catch (_) { /* ignore */ }
     await db.collection('elite').add({
       data: {
         heroId: hero.id,
@@ -1102,7 +1678,8 @@ async function resetEliteHeroes() {
         position: hero.position,
         organization: hero.organization,
         biography: hero.biography,
-        memberId: '',
+        memberDocId,
+        originalId,
         level: '',
         isAlive: true,
         sortOrder: i + 1,
@@ -1120,6 +1697,83 @@ async function resetEliteHeroes() {
   };
 }
 
+/** 一次性迁移：把旧 memberId / M#### 写成 memberDocId + originalId */
+async function migrateHonorMemberLinks() {
+  await ensureHonorCollections();
+  const collections = ['patriarchs', 'sages', 'elite'];
+  const stats = { patriarchs: 0, sages: 0, elite: 0, failed: 0 };
+
+  for (const col of collections) {
+    let skip = 0;
+    while (true) {
+      let rows = [];
+      try {
+        const res = await db.collection(col).skip(skip).limit(50).get();
+        rows = res.data || [];
+      } catch (e) {
+        if (isCollectionMissingError(e)) break;
+        throw e;
+      }
+      if (!rows.length) break;
+
+      for (const row of rows) {
+        try {
+          const patch = await enrichHonorLinkFields({
+            memberDocId: row.memberDocId || '',
+            originalId: row.originalId || row.memberId || '',
+            memberId: row.memberId || '',
+            name: row.name || ''
+          });
+          // 若 memberDocId 存的是 M####，enrich 会解析
+          if (!patch.memberDocId && row.memberDocId && /^[MC]\d+/i.test(String(row.memberDocId))) {
+            const again = await enrichHonorLinkFields({
+              originalId: String(row.memberDocId),
+              name: row.name || ''
+            });
+            Object.assign(patch, again);
+          }
+          if (!patch.memberDocId && row.name) {
+            const found = await db.collection('members')
+              .where({ name: clanifyPersonName(row.name) })
+              .limit(1)
+              .get();
+            const m = found.data && found.data[0];
+            if (m) {
+              patch.memberDocId = String(m._id);
+              patch.originalId = m.originalId || m.memberId || '';
+            }
+          }
+          if (!patch.memberDocId && !patch.originalId) continue;
+          if (
+            patch.memberDocId === row.memberDocId &&
+            patch.originalId === (row.originalId || '')
+          ) continue;
+
+          await db.collection(col).doc(row._id).update({
+            data: {
+              memberDocId: patch.memberDocId || '',
+              originalId: patch.originalId || '',
+              updatedAt: db.serverDate()
+            }
+          });
+          stats[col]++;
+        } catch (err) {
+          console.error('migrateHonor', col, row._id, err);
+          stats.failed++;
+        }
+      }
+      skip += rows.length;
+      if (rows.length < 50) break;
+    }
+  }
+
+  return {
+    success: true,
+    message: '荣誉榜族人关联迁移完成',
+    data: stats
+  };
+}
+
 /** 学历榜三类：从 members.education 实时归类 */
 async function listEducationHonor() {
   const allMembers = [];
@@ -1132,9 +1786,14 @@ async function listEducationHonor() {
       .field({
         _id: true,
         name: true,
+        originalId: true,
+        memberId: true,
         birthDate: true,
         education: true,
-        remark: true
+        remark: true,
+        gongming: true,
+        guanzhi: true,
+        positions: true
       })
       .skip(skip)
       .limit(pageSize)
@@ -1146,12 +1805,23 @@ async function listEducationHonor() {
     if (allMembers.length >= 5000) break;
   }
 
-  // 含教育字段或备注（不少人学历只写在 remark，如强飞、顶飞）
+  // 含学历 / 功名 / 官职 / 备注（不少人学历只写在 remark）
   const candidates = allMembers.filter(m =>
     (Array.isArray(m.education) && m.education.length > 0) ||
+    (m.gongming && String(m.gongming).trim()) ||
+    (m.guanzhi && String(m.guanzhi).trim()) ||
+    (Array.isArray(m.positions) && m.positions.length > 0) ||
     (m.remark && String(m.remark).trim())
   );
-  const data = buildEducationHonorLists(candidates);
+  const raw = buildEducationHonorLists(candidates);
+  const mapList = (list) => (list || []).map((row) => Object.assign({}, row, {
+    name: clanifyPersonName(row.name)
+  }));
+  const data = {
+    imperial: mapList(raw.imperial),
+    republican: mapList(raw.republican),
+    modern: mapList(raw.modern)
+  };
 
   return {
     success: true,
@@ -1252,8 +1922,6 @@ async function getFamilyTree(params) {
           fatherId: true,
           fatherName: true,
           gender: true,
-          spouseName: true,
-          spouseInfo: true,
           hasBrokenLineage: true
         })
         .skip(skip)
@@ -1281,10 +1949,122 @@ async function getFamilyTree(params) {
     return { success: true, data: { mode: 'hub', halls } };
   }
 
-  const members = await fetchAllMembers({ branch });
+  const members = (await fetchAllMembers({ branch })).map(clanifyMemberRow);
   return {
     success: true,
     data: { mode: 'chart', branch, members, total: members.length }
+  };
+}
+
+/**
+ * 批量修正云库族人/荣誉姓名冠「罗」（不产生罗罗；外姓含「氏」不加）
+ * 覆盖：members / wives.husbandName / sons_in_law.wifeName / patriarchs / elite
+ */
+async function fixClanSurnames(params = {}) {
+  const stats = {
+    membersScanned: 0,
+    membersUpdated: 0,
+    wivesUpdated: 0,
+    silUpdated: 0,
+    patriarchsUpdated: 0,
+    eliteUpdated: 0
+  };
+
+  async function pageAll(collection, handler) {
+    const pageSize = 100;
+    let skip = 0;
+    for (;;) {
+      const { data } = await db.collection(collection).skip(skip).limit(pageSize).get();
+      if (!data.length) break;
+      for (const row of data) {
+        await handler(row);
+      }
+      skip += pageSize;
+      if (data.length < pageSize) break;
+    }
+  }
+
+  await pageAll('members', async (m) => {
+    stats.membersScanned += 1;
+    const patch = {};
+    const newName = clanifyPersonName(m.name);
+    if (newName && newName !== m.name) patch.name = newName;
+    const newFather = clanifyPersonName(m.fatherName);
+    if (m.fatherName && newFather && newFather !== m.fatherName) patch.fatherName = newFather;
+    if (m.motherName && !looksLikeWifeName(m.motherName)) {
+      const nm = clanifyPersonName(m.motherName);
+      if (nm && nm !== m.motherName) patch.motherName = nm;
+    }
+    if (Object.keys(patch).length) {
+      await db.collection('members').doc(m._id).update({
+        data: Object.assign({}, patch, { updatedAt: db.serverDate() })
+      });
+      stats.membersUpdated += 1;
+    }
+  });
+
+  await pageAll('wives', async (w) => {
+    const patch = {};
+    if (w.husbandName) {
+      const hn = clanifyPersonName(w.husbandName);
+      if (hn && hn !== w.husbandName) patch.husbandName = hn;
+    }
+    if ((w.isSameVillage || w.linkedMemberId) && w.name && !looksLikeWifeName(w.name)) {
+      const wn = clanifyPersonName(w.name);
+      if (wn && wn !== w.name) patch.name = wn;
+    }
+    if (Object.keys(patch).length) {
+      await db.collection('wives').doc(w._id).update({
+        data: Object.assign({}, patch, { updatedAt: db.serverDate() })
+      });
+      stats.wivesUpdated += 1;
+    }
+  });
+
+  await pageAll('sons_in_law', async (s) => {
+    const patch = {};
+    if (s.wifeName) {
+      const wn = clanifyPersonName(s.wifeName);
+      if (wn && wn !== s.wifeName) patch.wifeName = wn;
+    }
+    if ((s.isSameVillage || s.linkedMemberId) && s.name && !looksLikeWifeName(s.name)) {
+      const n = clanifyPersonName(s.name);
+      if (n && n !== s.name) patch.name = n;
+    }
+    if (Object.keys(patch).length) {
+      await db.collection('sons_in_law').doc(s._id).update({
+        data: Object.assign({}, patch, { updatedAt: db.serverDate() })
+      });
+      stats.silUpdated += 1;
+    }
+  });
+
+  await pageAll('patriarchs', async (p) => {
+    if (!p.name) return;
+    const n = clanifyPersonName(p.name);
+    if (n && n !== p.name) {
+      await db.collection('patriarchs').doc(p._id).update({
+        data: { name: n, updatedAt: db.serverDate() }
+      });
+      stats.patriarchsUpdated += 1;
+    }
+  });
+
+  await pageAll('elite', async (e) => {
+    if (!e.name) return;
+    const n = clanifyPersonName(e.name);
+    if (n && n !== e.name) {
+      await db.collection('elite').doc(e._id).update({
+        data: { name: n, updatedAt: db.serverDate() }
+      });
+      stats.eliteUpdated += 1;
+    }
+  });
+
+  return {
+    success: true,
+    message: '族人姓名冠姓修正完成（已防罗罗）',
+    data: stats
   };
 }
 
@@ -1606,43 +2386,61 @@ async function debugMember(params) {
 
 // 初始化荣誉榜数据
 async function initHonorData(params) {
-  const { actionType } = params;
-  
+  const { actionType } = params || {};
+
   // 确保集合存在
-  const collections = ['patriarchs', 'sages', 'elite', 'graduates'];
-  for (const col of collections) {
-    try {
-      await db.createCollection(col);
-      console.log('创建集合:', col);
-    } catch (e) {
-      // 集合可能已存在，忽略错误
-    }
-  }
+  await ensureHonorCollections();
   
   if (actionType === 'init') {
     // 初始化族长数据
     const patriarchsData = [
-      { name: '公瑾', title: '一世基祖', generation: 1, branch: '中和堂', branchTitle: '初代基祖', originRegion: '未知', achievements: '罗氏迁高洲始祖', sortOrder: 1 },
-      { name: '浩然', title: '十一世', generation: 11, branch: '中和堂', branchTitle: '安福基祖', originRegion: '安福', achievements: '安福分支始祖', sortOrder: 2 },
-      { name: '原', title: '十四世', generation: 14, branch: '忠爱堂', branchTitle: '鹧湖基祖', originRegion: '鹧湖', achievements: '鹧湖分支始祖', sortOrder: 3 },
-      { name: '筮元', title: '十六世', generation: 16, branch: '德裕堂', branchTitle: '高洲基祖', originRegion: '高洲', achievements: '高洲分支始祖', sortOrder: 4 },
-      { name: '英', title: '十八世', generation: 18, branch: '明儒堂', branchTitle: '明儒堂基祖', originRegion: '高洲', achievements: '明儒堂始祖', sortOrder: 5 },
-      { name: '华', title: '十八世', generation: 18, branch: '德裕堂', branchTitle: '德裕堂基祖', originRegion: '高洲', achievements: '德裕堂始祖', sortOrder: 6 },
-      { name: '芬', title: '十八世', generation: 18, branch: '忠爱堂', branchTitle: '忠爱堂基祖', originRegion: '高洲', achievements: '忠爱堂始祖', sortOrder: 7 }
+      { name: '罗公瑾', title: '一世基祖', generation: 1, branch: '中和堂', branchTitle: '初代基祖', originRegion: '未知', achievements: '罗氏迁高洲始祖', sortOrder: 1 },
+      { name: '罗浩然', title: '十一世', generation: 11, branch: '中和堂', branchTitle: '安福基祖', originRegion: '安福', achievements: '安福分支始祖', sortOrder: 2 },
+      { name: '罗原', title: '十四世', generation: 14, branch: '忠爱堂', branchTitle: '鹧湖基祖', originRegion: '鹧湖', achievements: '鹧湖分支始祖', sortOrder: 3 },
+      { name: '罗筮元', title: '十六世', generation: 16, branch: '德裕堂', branchTitle: '高洲基祖', originRegion: '高洲', achievements: '高洲分支始祖', sortOrder: 4 },
+      { name: '罗英', title: '十八世', generation: 18, branch: '明儒堂', branchTitle: '明儒堂基祖', originRegion: '高洲', achievements: '明儒堂始祖', sortOrder: 5 },
+      { name: '罗华', title: '十八世', generation: 18, branch: '德裕堂', branchTitle: '德裕堂基祖', originRegion: '高洲', achievements: '德裕堂始祖', sortOrder: 6 },
+      { name: '罗芬', title: '十八世', generation: 18, branch: '忠爱堂', branchTitle: '忠爱堂基祖', originRegion: '高洲', achievements: '忠爱堂始祖', sortOrder: 7 }
     ];
     
     let added = 0;
+    let updated = 0;
     for (const patriarch of patriarchsData) {
-      const exist = await db.collection('patriarchs').where({ name: patriarch.name, generation: patriarch.generation }).count();
-      if (exist.total === 0) {
+      const fullName = clanifyPersonName(patriarch.name);
+      const exist = await db.collection('patriarchs')
+        .where({ generation: patriarch.generation, branch: patriarch.branch })
+        .limit(1)
+        .get();
+      if (exist.data && exist.data.length) {
+        const row = exist.data[0];
+        if (row.name !== fullName) {
+          await db.collection('patriarchs').doc(row._id).update({
+            data: {
+              name: fullName,
+              title: patriarch.title,
+              branchTitle: patriarch.branchTitle,
+              originRegion: patriarch.originRegion,
+              achievements: patriarch.achievements,
+              sortOrder: patriarch.sortOrder,
+              updatedAt: db.serverDate()
+            }
+          });
+          updated++;
+        }
+      } else {
         await db.collection('patriarchs').add({
-          data: { ...patriarch, createdAt: db.serverDate(), updatedAt: db.serverDate() }
+          data: {
+            ...patriarch,
+            name: fullName,
+            createdAt: db.serverDate(),
+            updatedAt: db.serverDate()
+          }
         });
         added++;
       }
     }
     
-    return { success: true, message: '族长数据初始化完成', data: { added } };
+    return { success: true, message: '族长数据初始化完成', data: { added, updated } };
   }
   
   if (actionType === 'syncFromMembers') {
@@ -2029,6 +2827,84 @@ async function listAccounts(params) {
   }));
 
   return { success: true, data: list, total, page, pageSize };
+}
+
+/**
+ * 管理员强制解绑：删除 user_accounts，并清空成员上的手机/微信等绑定字段
+ * @param {{ _id?: string, accountId?: string }} data
+ */
+async function forceUnbindAccount(data) {
+  const accountId = (data && (data._id || data.accountId)) || '';
+  if (!accountId) {
+    return { success: false, message: '缺少账号 ID' };
+  }
+
+  const _ = db.command;
+  let account = null;
+  try {
+    const res = await db.collection('user_accounts').doc(accountId).get();
+    account = res.data;
+  } catch (e) {
+    return { success: false, message: '账号不存在或已删除' };
+  }
+  if (!account) {
+    return { success: false, message: '账号不存在或已删除' };
+  }
+
+  const personId = account.personId || '';
+  const openid = account.openid || '';
+  let memberCleared = false;
+  let ticketsRemoved = 0;
+
+  if (personId) {
+    try {
+      await db.collection('members').doc(personId).update({
+        data: {
+          phone: '',
+          wechat: '',
+          boundOpenId: _.remove(),
+          boundAccountId: _.remove(),
+          boundPhone: _.remove(),
+          updatedAt: db.serverDate()
+        }
+      });
+      memberCleared = true;
+    } catch (e) {
+      console.log('forceUnbind clear member skip', e.message || e);
+    }
+  }
+
+  if (openid) {
+    try {
+      for (;;) {
+        const { data: tickets } = await db.collection('verify_tickets')
+          .where({ openid })
+          .limit(50)
+          .get();
+        if (!tickets || !tickets.length) break;
+        await Promise.all(tickets.map(doc => db.collection('verify_tickets').doc(doc._id).remove()));
+        ticketsRemoved += tickets.length;
+        if (tickets.length < 50) break;
+      }
+    } catch (e) {
+      console.log('forceUnbind clear tickets skip', e.message || e);
+    }
+  }
+
+  await db.collection('user_accounts').doc(accountId).remove();
+
+  return {
+    success: true,
+    message: `已强制解绑「${account.name || ''}」`,
+    data: {
+      accountId,
+      personId,
+      name: account.name || '',
+      phoneMasked: maskPhoneAdmin(account.phone),
+      memberCleared,
+      ticketsRemoved
+    }
+  };
 }
 
 async function listDevMessages(params) {

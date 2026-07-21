@@ -41,9 +41,13 @@ function memberKey(m) {
 
 function resolveRelation(viewer, target) {
   if (!viewer || !target) return 'none';
-  if (viewer._id === target._id) return 'self';
+  const vid = viewer._id != null ? String(viewer._id) : '';
+  const tid = target._id != null ? String(target._id) : '';
+  if (vid && tid && vid === tid) return 'self';
+  // 兼容 personId 与文档 id 不一致时用业务键互认
   const vKey = memberKey(viewer);
   const tKey = memberKey(target);
+  if (vKey && tKey && vKey === tKey) return 'self';
   if (vKey && oid(target.fatherId) === vKey) return 'child';
   if (tKey && oid(viewer.fatherId) === tKey) return 'parent';
   if (vKey && oid(target.spouseId) === vKey) return 'spouse';
@@ -116,15 +120,20 @@ function pickEditable(patch) {
       if (!e) return null;
       if (typeof e === 'string') {
         const t = e.trim();
-        return t ? { degree: t, school: '', isDefault: false } : null;
+        return t ? { degree: t, school: '', year: null, major: '', isDefault: false } : null;
       }
       const degree = String(e.degree || '').trim();
       const school = String(e.school || '').trim();
       if (!degree && !school) return null;
+      let year = null;
+      if (e.year != null && e.year !== '') {
+        const n = Number(e.year);
+        year = Number.isFinite(n) ? n : null;
+      }
       return {
         degree,
         school,
-        year: e.year != null && e.year !== '' ? Number(e.year) : null,
+        year,
         major: String(e.major || '').trim(),
         isDefault: !!e.isDefault
       };
@@ -169,6 +178,22 @@ function pickEditable(patch) {
   return out;
 }
 
+/** 去掉 undefined / null / NaN，避免云库 update 因嵌套 null 报错 */
+function sanitizeForCloudUpdate(value) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'number' && Number.isNaN(value)) return undefined;
+  if (typeof value !== 'object') return value;
+  if (Array.isArray(value)) {
+    return value.map(sanitizeForCloudUpdate).filter(v => v !== undefined);
+  }
+  const out = {};
+  Object.keys(value).forEach(k => {
+    const v = sanitizeForCloudUpdate(value[k]);
+    if (v !== undefined) out[k] = v;
+  });
+  return out;
+}
+
 async function getOpenId() {
   const ctx = cloud.getWXContext();
   return ctx.OPENID || '';
@@ -180,15 +205,57 @@ async function getAccountByOpenId(openid) {
   return res.data[0] || null;
 }
 
-async function getMember(id) {
-  if (!id) return null;
-  const res = await db.collection(COL_MEMBERS).doc(id).get().catch(() => null);
-  return res && res.data ? res.data : null;
+function attachId(doc, id) {
+  if (!doc) return null;
+  const next = Object.assign({}, doc);
+  if (!next._id && id) next._id = String(id);
+  return next;
 }
 
-async function isPersonVerified(personId) {
-  const res = await db.collection(COL_ACCOUNTS).where({ personId }).limit(1).get();
-  return res.data.length > 0;
+/** 按云 _id / originalId / memberId 解析成员（并确保带 _id） */
+async function getMember(id) {
+  if (id == null || id === '') return null;
+  const key = String(id);
+
+  try {
+    const res = await db.collection(COL_MEMBERS).doc(key).get();
+    if (res && res.data) return attachId(res.data, key);
+  } catch (_) { /* continue */ }
+
+  // 兼容 personId / 跳转 id 存的是 originalId 或 memberId
+  const tries = [
+    { originalId: key },
+    { memberId: key }
+  ];
+  // 纯数字 originalId
+  if (/^\d+$/.test(key)) {
+    tries.unshift({ originalId: Number(key) });
+  }
+  for (const where of tries) {
+    try {
+      const res = await db.collection(COL_MEMBERS).where(where).limit(1).get();
+      if (res.data && res.data[0]) {
+        const row = res.data[0];
+        return attachId(row, row._id);
+      }
+    } catch (_) { /* continue */ }
+  }
+  return null;
+}
+
+async function isPersonVerified(member) {
+  if (!member) return false;
+  const ids = [
+    member._id,
+    member.originalId,
+    member.memberId
+  ].filter(v => v != null && String(v) !== '').map(String);
+  const uniq = [...new Set(ids)];
+  for (const personId of uniq) {
+    const res = await db.collection(COL_ACCOUNTS).where({ personId }).limit(1).get();
+    if (res.data && res.data.length) return true;
+  }
+  return false;
 }
 
 async function getViewerContext() {
@@ -197,7 +264,7 @@ async function getViewerContext() {
   const account = await getAccountByOpenId(openid);
   if (!account) return { error: fail('请先完成身份认证') };
   const viewer = await getMember(account.personId);
-  if (!viewer) return { error: fail('绑定的族谱成员不存在') };
+  if (!viewer) return { error: fail('绑定的族谱成员不存在，请重新验证身份') };
   return { openid, account, viewer };
 }
 
@@ -206,7 +273,7 @@ async function getPermission(params) {
   if (ctx.error) return ctx.error;
   const target = await getMember(params.targetId);
   if (!target) return fail('成员不存在');
-  const targetVerified = await isPersonVerified(target._id);
+  const targetVerified = await isPersonVerified(target);
   return ok({
     permission: evaluatePermission(ctx.viewer, target, targetVerified),
     viewerId: ctx.viewer._id,
@@ -217,31 +284,39 @@ async function getPermission(params) {
 async function updateMember(params) {
   const ctx = await getViewerContext();
   if (ctx.error) return ctx.error;
-  const target = await getMember(params.targetId);
-  if (!target) return fail('成员不存在');
-  const targetVerified = await isPersonVerified(target._id);
+  const targetId = params.targetId || (params.data && params.data.targetId);
+  const patch = params.patch || (params.data && params.data.patch) || {};
+  const target = await getMember(targetId);
+  if (!target || !target._id) return fail('成员不存在');
+  const targetVerified = await isPersonVerified(target);
   const perm = evaluatePermission(ctx.viewer, target, targetVerified);
   if (!perm.canEdit) {
     return fail(perm.lockReason || '无权修改该成员资料');
   }
-  const data = pickEditable(params.patch || {});
-  if (!Object.keys(data).length) return fail('没有可更新的字段');
+  let data = pickEditable(patch);
+  data = sanitizeForCloudUpdate(data);
+  if (!data || !Object.keys(data).length) return fail('没有可更新的字段');
   data.updatedAt = db.serverDate();
-  await db.collection(COL_MEMBERS).doc(target._id).update({ data });
-  return ok();
+  try {
+    await db.collection(COL_MEMBERS).doc(String(target._id)).update({ data });
+  } catch (err) {
+    console.error('updateMember db', target._id, err);
+    return fail(err.message || '写入云库失败');
+  }
+  return ok({ data: { _id: target._id } });
 }
 
 async function deleteMember(params) {
   const ctx = await getViewerContext();
   if (ctx.error) return ctx.error;
   const target = await getMember(params.targetId);
-  if (!target) return fail('成员不存在');
-  const targetVerified = await isPersonVerified(target._id);
+  if (!target || !target._id) return fail('成员不存在');
+  const targetVerified = await isPersonVerified(target);
   const perm = evaluatePermission(ctx.viewer, target, targetVerified);
   if (!perm.canDelete) {
     return fail(perm.lockReason || '无权删除该成员（仅可删除未认证的配偶或子女）');
   }
-  await db.collection(COL_MEMBERS).doc(target._id).remove();
+  await db.collection(COL_MEMBERS).doc(String(target._id)).remove();
   return ok();
 }
 
@@ -262,8 +337,11 @@ async function addFamily(params) {
   const viewer = ctx.viewer;
   const selfPerm = evaluatePermission(viewer, viewer, true);
   const relation = params.relation;
-  const name = String(params.name || '').trim().replace(/^罗/, '');
+  const { withClanSurname } = require('./clanName');
+  const rawName = String(params.name || '').trim();
   const gender = params.gender === '女' ? '女' : '男';
+  // 族人进 members：加罗姓；姓名含「氏」视为外姓表述，不加
+  const name = /氏/.test(rawName) ? rawName.replace(/^罗+/, '') : withClanSurname(rawName);
   if (!name) return fail('请填写姓名');
 
   if (relation === 'child' && !selfPerm.canAddChild) return fail('无权添加子女');

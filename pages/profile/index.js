@@ -80,9 +80,40 @@ Page({
     wx.navigateTo({ url: '/pages/account/rebind' });
   },
 
+  resetBinding() {
+    wx.showModal({
+      title: '清除认证并重新关联',
+      content: '将删除本微信在云端的旧绑定，然后可重新走身份验证。确认继续？',
+      confirmText: '清除并重验',
+      success: async (res) => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '清除中...' });
+        try {
+          const result = await authService.resetMyBinding();
+          wx.hideLoading();
+          if (!result || !result.success) {
+            wx.showToast({ title: (result && result.message) || '清除失败', icon: 'none' });
+            return;
+          }
+          wx.showModal({
+            title: '已清除',
+            content: '请重新完成身份验证以关联族人。',
+            showCancel: false,
+            success: () => {
+              wx.reLaunch({ url: '/pages/auth/welcome' });
+            }
+          });
+        } catch (err) {
+          wx.hideLoading();
+          wx.showToast({ title: err.message || '清除失败', icon: 'none' });
+        }
+      }
+    });
+  },
+
   logout() {
     if (!config.isLocalMode()) {
-      wx.showToast({ title: '云端账号解绑请联系管理员', icon: 'none' });
+      this.resetBinding();
       return;
     }
     wx.showModal({

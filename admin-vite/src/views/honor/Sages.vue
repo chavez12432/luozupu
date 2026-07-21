@@ -9,6 +9,11 @@
             添加乡贤
           </el-button>
         </div>
+        <el-alert type="info" :closable="false" show-icon style="margin-top: 12px">
+          <template #title>
+            姓名等从关联族人联动；本榜侧重「主要成就」。点「打开族人」可改族人库功名等字段。
+          </template>
+        </el-alert>
       </template>
       
       <el-form :inline="true" :model="searchForm" class="search-form">
@@ -18,6 +23,7 @@
             <el-option label="元" value="元" />
             <el-option label="明" value="明" />
             <el-option label="清" value="清" />
+            <el-option label="近现代" value="近现代" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -35,18 +41,26 @@
       <el-table :data="tableData" border v-loading="loading" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="50" />
         <el-table-column prop="name" label="姓名" width="100" />
-        <el-table-column prop="generation" label="世代" width="80" />
+        <el-table-column prop="originalId" label="族谱ID" width="100" show-overflow-tooltip />
+        <el-table-column prop="generation" label="世代" width="70" />
         <el-table-column prop="dynasty" label="朝代" width="80">
           <template #default="scope">
             <el-tag>{{ scope.row.dynasty }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="birthYear" label="出生年" width="100" />
-        <el-table-column prop="deathYear" label="去世年" width="100" />
-        <el-table-column prop="achievements" label="主要成就" show-overflow-tooltip />
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column prop="gongming" label="功名(族人)" width="110" show-overflow-tooltip />
+        <el-table-column prop="achievements" label="主要成就" min-width="160" show-overflow-tooltip />
+        <el-table-column label="关联" width="90">
+          <template #default="scope">
+            <el-tag :type="scope.row.hasLink ? 'success' : 'warning'" size="small">
+              {{ scope.row.hasLink ? '已关联' : '未关联' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="scope">
             <el-button type="primary" size="small" @click="handleEdit(scope.row)">编辑</el-button>
+            <el-button size="small" :disabled="!scope.row.memberDocId" @click="openMember(scope.row)">打开族人</el-button>
             <el-button type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
@@ -117,6 +131,9 @@ const resetSearch = () => {
 
 const goToAdd = () => router.push('/honor/sages/form')
 const handleEdit = (row) => router.push('/honor/sages/form?id=' + row._id)
+const openMember = (row) => {
+  if (row.memberDocId) router.push(`/members/edit/${row.memberDocId}`)
+}
 
 const handleDelete = async (row) => {
   try {

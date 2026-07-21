@@ -3,10 +3,10 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>学历榜（功名与学历）</span>
+          <span>学历榜（族人学历 / 功名联动）</span>
           <el-alert type="info" :closable="false" show-icon>
             <template #title>
-              数据来源：族人学历字段及谱文备注。分三类：科举功名、民国—2000、1997年后考大学（专科及以上）。点击姓名可进入族人详情。
+              只读：与个人详情「学历」三字段（学历/学位、学校、毕业年份）一致展示。有结构化 education 时不再用备注覆盖。点姓名打开族人编辑页。
             </template>
           </el-alert>
           <el-radio-group v-model="currentTab" @change="onTabChange">
@@ -18,31 +18,40 @@
       </template>
 
       <el-table :data="pagedData" border v-loading="loading">
-        <el-table-column label="姓名" width="120" fixed>
+        <el-table-column label="姓名" width="110" fixed>
           <template #default="scope">
             <el-button link type="primary" @click="viewDetail(scope.row)">
               {{ scope.row.name }}
             </el-button>
           </template>
         </el-table-column>
-        <el-table-column prop="birthText" label="出生日期" width="160" show-overflow-tooltip />
+        <el-table-column prop="originalId" label="族谱ID" width="100" show-overflow-tooltip />
+        <el-table-column prop="birthText" label="出生日期" width="140" show-overflow-tooltip />
 
-        <el-table-column v-if="currentTab === 'imperial'" prop="dynastyEra" label="朝代年号" width="180" show-overflow-tooltip />
-        <el-table-column v-if="currentTab === 'imperial'" prop="titleText" label="称号" min-width="160" />
+        <el-table-column v-if="currentTab === 'imperial'" prop="dynastyEra" label="朝代年号" width="150" show-overflow-tooltip />
+        <el-table-column v-if="currentTab === 'imperial'" prop="titleText" label="功名/称号" min-width="140" show-overflow-tooltip />
+        <el-table-column v-if="currentTab === 'imperial'" prop="gongming" label="功名字段" min-width="120" show-overflow-tooltip />
+        <el-table-column v-if="currentTab === 'imperial'" prop="guanzhi" label="官职" min-width="140" show-overflow-tooltip />
 
-        <el-table-column v-if="currentTab !== 'imperial'" label="学校 / 学历" min-width="280">
+        <el-table-column v-if="currentTab !== 'imperial'" label="学历" min-width="280">
           <template #default="scope">
             <div v-for="(edu, idx) in scope.row.educations" :key="idx" class="edu-line">
-              <el-tag size="small" type="success">{{ edu.degree }}</el-tag>
-              <span class="school-text">{{ edu.school || '—' }}</span>
+              <span class="edu-display">{{ edu.display || [edu.degree, edu.school, edu.year].filter(Boolean).join(' ') || '—' }}</span>
             </div>
           </template>
         </el-table-column>
+        <el-table-column v-if="currentTab !== 'imperial'" prop="guanzhi" label="官职/职务" min-width="140" show-overflow-tooltip />
 
+        <el-table-column label="关联" width="100" fixed="right">
+          <template #default="scope">
+            <el-tag v-if="scope.row._id" type="success" size="small">已关联</el-tag>
+            <el-tag v-else type="danger" size="small">无ID</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="110" fixed="right">
           <template #default="scope">
-            <el-button type="primary" size="small" @click="viewDetail(scope.row)">
-              查看详情
+            <el-button type="primary" size="small" :disabled="!scope.row._id" @click="viewDetail(scope.row)">
+              打开族人
             </el-button>
           </template>
         </el-table-column>
@@ -120,6 +129,8 @@ const loadData = async () => {
 const viewDetail = (row) => {
   if (row._id) {
     router.push(`/members/edit/${row._id}`)
+  } else {
+    ElMessage.warning('该条未关联到云库成员 _id')
   }
 }
 
@@ -141,8 +152,17 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.edu-display {
+  color: #303133;
+  line-height: 1.5;
 }
 .school-text {
   color: #606266;
+}
+.year-text {
+  color: #909399;
+  font-size: 12px;
 }
 </style>

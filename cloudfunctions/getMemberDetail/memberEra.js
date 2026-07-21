@@ -92,40 +92,76 @@ function yearToChineseDigits(year) {
   return String(year).split('').map(c => (/^\d$/.test(c) ? d[Number(c)] : c)).join('');
 }
 
+/** 从今人生卒对象取农历 Lunar 实例；失败返回 null */
+function getModernLunarInstance(dateObj) {
+  if (!dateObj) return null;
+  try {
+    const dateConvert = require('./dateConvert');
+    if (!dateConvert.isLunarReady() || !dateConvert.Lunar) return null;
+    const full = dateConvert.enrichBirthDate(dateObj);
+    const lunar = full && full.lunar;
+    if (!lunar || !lunar.year || !lunar.month || !lunar.day) return null;
+    const lm = lunar.isLeap ? -Number(lunar.month) : Number(lunar.month);
+    return dateConvert.Lunar.fromYmd(Number(lunar.year), lm, Number(lunar.day));
+  } catch (e) {
+    return null;
+  }
+}
+
+/** 今人农历日期（不含干支/生肖）：一九八六年六月初一日 */
+function formatModernLunarDateOnly(dateObj) {
+  if (!dateObj) return '';
+  const L = getModernLunarInstance(dateObj);
+  if (L) {
+    let base = L.toString();
+    if (base && !/日$/.test(base)) base += '日';
+    return base;
+  }
+  const lunar = dateObj.lunar || {};
+  if (!lunar.year) return '';
+  const y = yearToChineseDigits(lunar.year);
+  const mi = Number(lunar.month) - 1;
+  const monthStr = (lunar.isLeap ? '闰' : '') + (LUNAR_MONTHS[mi] || String(lunar.month));
+  const dayStr = LUNAR_DAYS[Number(lunar.day) - 1] || `${lunar.day}`;
+  return `${y}年${monthStr}月${dayStr}日`;
+}
+
+/** 今人年干支，如 丙午 */
+function formatModernGanzhi(dateObj) {
+  if (!dateObj) return '';
+  const L = getModernLunarInstance(dateObj);
+  if (L && typeof L.getYearInGanZhi === 'function') {
+    return L.getYearInGanZhi() || '';
+  }
+  const raw = String(dateObj.ganzhi || '').trim();
+  const m = raw.match(/^([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])/);
+  return m ? m[1] : '';
+}
+
+/** 今人生肖 */
+function formatModernZodiac(dateObj) {
+  if (!dateObj) return '';
+  if (dateObj.zodiac) return String(dateObj.zodiac).trim();
+  const L = getModernLunarInstance(dateObj);
+  if (L && typeof L.getYearShengXiao === 'function') {
+    return L.getYearShengXiao() || '';
+  }
+  return '';
+}
+
 /**
- * 今人农历展示：一九八六年六月初一日 丙午年 马
+ * 今人农历展示（兼容旧用法）：一九八六年六月初一日 丙午年 马
  */
 function formatModernLunarLine(dateObj) {
   if (!dateObj) return '';
-  try {
-    const { enrichBirthDate } = require('./dateConvert');
-    const full = enrichBirthDate(dateObj);
-    const lunar = full && full.lunar;
-    if (!lunar || !lunar.year || !lunar.month || !lunar.day) return '';
-
-    const { Lunar } = require('./vendor/lunar');
-    const lm = lunar.isLeap ? -Number(lunar.month) : Number(lunar.month);
-    const L = Lunar.fromYmd(Number(lunar.year), lm, Number(lunar.day));
-    let base = L.toString(); // 一九八六年六月初一
-    if (base && !/日$/.test(base)) base += '日';
-    const ganzhi = L.getYearInGanZhi();
-    const zodiac = L.getYearShengXiao();
-    return `${base} ${ganzhi}年 ${zodiac}`.replace(/\s+/g, ' ').trim();
-  } catch (e) {
-    // 降级：用已有字段拼接
-    const lunar = dateObj.lunar || {};
-    if (!lunar.year) return '';
-    const y = yearToChineseDigits(lunar.year);
-    const mi = Number(lunar.month) - 1;
-    const monthStr = (lunar.isLeap ? '闰' : '') + (LUNAR_MONTHS[mi] || String(lunar.month));
-    const dayStr = LUNAR_DAYS[Number(lunar.day) - 1] || `${lunar.day}`;
-    const ganzhi = (dateObj.ganzhi || '').replace(/年$/, '');
-    const zodiac = dateObj.zodiac || '';
-    const parts = [`${y}年${monthStr}月${dayStr}日`];
-    if (ganzhi) parts.push(`${ganzhi}年`);
-    if (zodiac) parts.push(zodiac);
-    return parts.join(' ');
-  }
+  const base = formatModernLunarDateOnly(dateObj);
+  if (!base) return '';
+  const ganzhi = formatModernGanzhi(dateObj);
+  const zodiac = formatModernZodiac(dateObj);
+  const parts = [base];
+  if (ganzhi) parts.push(`${ganzhi}年`);
+  if (zodiac) parts.push(zodiac);
+  return parts.join(' ').replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -360,25 +396,59 @@ function extractWorkplacesFromRemark(remark) {
   return found;
 }
 
-function formatEducationList(education) {
-  if (!education || !education.length) return [];
-  return education.map(e => {
+function splitMultiValues(text) {
+  if (text == null || text === '') return [];
+  return String(text)
+    .split(/[,，、;；/|]/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * 将 Excel 里挤在一条里的「本科，硕士 / A大学,B大学 / 2004,2007」拆成多行
+ */
+function expandEducationEntries(education) {
+  const out = [];
+  (education || []).forEach(e => {
+    if (!e) return;
     if (typeof e === 'string') {
-      return { degree: e, school: '', year: null, display: e };
+      const line = e.trim();
+      if (line) out.push({ degree: line, school: '', year: null, line, display: line });
+      return;
     }
-    const degree = e.degree || '';
-    const school = e.school || '';
-    const year = e.year != null ? e.year : null;
-    const parts = [degree, school].filter(Boolean);
-    if (year) parts.push(`${year}年毕业`);
-    return {
-      degree,
-      school,
-      year,
-      major: e.major || '',
-      display: parts.join(' · ')
-    };
-  }).filter(x => x.display);
+    const degrees = splitMultiValues(e.degree);
+    const schools = splitMultiValues(e.school);
+    const yearsRaw = splitMultiValues(e.year);
+    const years = yearsRaw.map(y => {
+      const n = Number(String(y).replace(/年.*/, ''));
+      return Number.isFinite(n) && n > 0 ? n : y;
+    });
+    const n = Math.max(degrees.length, schools.length, years.length, 1);
+    if (!degrees.length && !schools.length && !years.length && !(e.degree || e.school || e.year)) {
+      return;
+    }
+    for (let i = 0; i < n; i++) {
+      const degree = degrees[i] || (n === 1 ? (e.degree || '') : '') || '';
+      const school = schools[i] || (schools.length === 1 ? schools[0] : '') || (n === 1 ? (e.school || '') : '') || '';
+      let year = years[i] != null ? years[i] : (years.length === 1 ? years[0] : null);
+      if (year == null && n === 1 && e.year != null && e.year !== '') year = e.year;
+      const line = [degree, school, year].filter(v => v != null && String(v).trim() !== '').join(' ');
+      if (!line) continue;
+      out.push({
+        degree,
+        school,
+        year: year == null || year === '' ? null : year,
+        major: e.major || '',
+        display: line,
+        line
+      });
+    }
+  });
+  return out;
+}
+
+function formatEducationList(education) {
+  return expandEducationEntries(education);
 }
 
 function formatHonorList(honors) {
@@ -394,8 +464,74 @@ function formatWorkplaceList(workplaces) {
   return workplaces.map(w => {
     if (typeof w === 'string') return w;
     const parts = [w.name || w.organization, w.title].filter(Boolean);
-    return parts.join(' · ') || '';
+    return parts.join(' ') || '';
   }).filter(Boolean);
+}
+
+/** 工作条目：单位 + 职位（可多条；支持逗号/分号并列拆分） */
+function formatJobList(positions, workplaces) {
+  const jobs = [];
+
+  function pushJob(organization, title) {
+    const org = String(organization || '').trim();
+    const tit = String(title || '').trim();
+    if (!org && !tit) return;
+    const line = [org, tit].filter(Boolean).join(' ');
+    if (!line) return;
+    jobs.push({ organization: org, title: tit, display: line, line });
+  }
+
+  (positions || []).forEach(p => {
+    if (!p) return;
+    if (typeof p === 'string') {
+      splitMultiValues(p).forEach(t => pushJob('', t));
+      return;
+    }
+    const orgs = splitMultiValues(p.organization || p.name);
+    const titles = splitMultiValues(p.title);
+    const n = Math.max(orgs.length, titles.length, 1);
+    if (!orgs.length && !titles.length) return;
+    for (let i = 0; i < n; i++) {
+      const org = orgs[i] || (orgs.length === 1 ? orgs[0] : '') || '';
+      const tit = titles[i] || (titles.length === 1 && orgs.length <= 1 ? titles[0] : '') || '';
+      // 仅职位多段、无单位：各成一行
+      if (!orgs.length && titles.length) {
+        pushJob('', titles[i] || '');
+        continue;
+      }
+      // 仅单位多段、无职位：各成一行
+      if (!titles.length && orgs.length) {
+        pushJob(orgs[i] || '', '');
+        continue;
+      }
+      pushJob(org, tit);
+    }
+  });
+
+  if (jobs.length) return jobs;
+
+  (workplaces || []).forEach(w => {
+    if (typeof w === 'string') {
+      splitMultiValues(w).forEach(org => pushJob(org, ''));
+      return;
+    }
+    pushJob(w.name || w.organization || '', w.title || '');
+  });
+  return jobs;
+}
+
+/** 家族相册 URL 列表，最多 limit 张 */
+function formatPhotoGalleryList(gallery, limit = 10) {
+  if (!Array.isArray(gallery) || !gallery.length) return [];
+  const max = Math.max(0, Number(limit) || 10);
+  return gallery
+    .map(item => {
+      if (!item) return '';
+      if (typeof item === 'string') return item.trim();
+      return String(item.url || item.fileID || item.src || '').trim();
+    })
+    .filter(Boolean)
+    .slice(0, max);
 }
 
 /**
@@ -423,52 +559,81 @@ function applyDetailDisplay(member, options = {}) {
   const deathObj = detail._deathDateObj || detail.deathDate;
 
   if (modern) {
-    detail.birthDateLunar = formatModernLunarLine(birthObj) || '';
+    detail.birthDateLunar = formatModernLunarDateOnly(birthObj) || '';
     detail.birthDateGregorian = formatModernGregorianLine(birthObj) || '';
-    // 兼容旧单字段：优先农历行
+    detail.birthGanzhi = formatModernGanzhi(birthObj) || '';
+    detail.birthZodiac = formatModernZodiac(birthObj) || '';
+    detail.constellation = String(
+      member.constellation || (birthObj && birthObj.constellation) || ''
+    ).trim();
+    // 兼容旧单字段
     detail.birthDate = detail.birthDateLunar || formatModernDate(birthObj) || '';
     detail.birthDateEra = detail.birthDateGregorian || '';
-    detail.deathDateLunar = hasValidDeathDate(deathObj) ? (formatModernLunarLine(deathObj) || '') : '';
-    detail.deathDateGregorian = hasValidDeathDate(deathObj) ? (formatModernGregorianLine(deathObj) || '') : '';
+    const deathOk = hasValidDeathDate(deathObj);
+    detail.deathDateLunar = deathOk ? (formatModernLunarDateOnly(deathObj) || '') : '';
+    detail.deathDateGregorian = deathOk ? (formatModernGregorianLine(deathObj) || '') : '';
+    detail.deathGanzhi = deathOk ? (formatModernGanzhi(deathObj) || '') : '';
     detail.deathDate = detail.deathDateLunar || '';
     detail.deathDateEra = detail.deathDateGregorian || '';
   } else {
-    detail.birthDate = formatNumericDate(birthObj) || '';
+    const bRaw = (birthObj && birthObj.raw) || '';
+    const dRaw = (deathObj && deathObj.raw) || '';
+    detail.birthDate = formatNumericDate(birthObj) || bRaw || '';
     detail.birthDateEra = formatEraGanzhiDate(birthObj) || '';
+    detail.birthDynasty = (birthObj && (birthObj.dynasty || '')) || '';
+    detail.birthGanzhi = (birthObj && (birthObj.ganzhi || '')) || '';
+    detail.birthZodiac = (birthObj && (birthObj.zodiac || '')) || '';
     detail.birthDateLunar = '';
     detail.birthDateGregorian = '';
-    detail.deathDate = hasValidDeathDate(deathObj) ? (formatNumericDate(deathObj) || '') : '';
+    detail.deathDate = hasValidDeathDate(deathObj)
+      ? (formatNumericDate(deathObj) || dRaw || '')
+      : (dRaw || '');
     detail.deathDateEra = hasValidDeathDate(deathObj) ? (formatEraGanzhiDate(deathObj) || '') : '';
+    detail.deathDynasty = (deathObj && (deathObj.dynasty || '')) || '';
+    detail.deathGanzhi = (deathObj && (deathObj.ganzhi || '')) || '';
+    detail.deathZodiac = (deathObj && (deathObj.zodiac || '')) || '';
     detail.deathDateLunar = '';
     detail.deathDateGregorian = '';
   }
 
-  // 享年：无卒年则留空（绝不用「尚在世」）
-  if (!hasValidDeathDate(deathObj)) {
+  // 寿命/享年：有寿命字段则显示；否则有卒年时才拼「N岁」
+  if (detail.lifespan != null && String(detail.lifespan).trim() !== '') {
+    const life = String(detail.lifespan).trim();
+    detail.lifespanText = /岁$/.test(life) || Number.isNaN(Number(life)) ? life : `${life}岁`;
+  } else if (!hasValidDeathDate(deathObj)) {
     detail.lifespanText = '';
-  } else if (detail.lifespan != null && detail.lifespan !== '' && !Number.isNaN(Number(detail.lifespan))) {
-    detail.lifespanText = `${detail.lifespan}岁`;
   } else {
     detail.lifespanText = '';
   }
   detail.showLifespan = true;
 
+  // 古代：功名 / 官职（导入字段；兼容旧 positions）
+  detail.gongming = member.gongming || '';
+  detail.guanzhi = member.guanzhi || '';
+  if (!detail.guanzhi && Array.isArray(member.positions) && member.positions.length) {
+    detail.guanzhi = member.positions
+      .map(p => (typeof p === 'string' ? p : (p.title || '')))
+      .filter(Boolean)
+      .join('；');
+  }
+
   if (!modern) {
     detail.burialPlace = detail.burialPlace || extractBurialPlace(member.remark || '') || '';
-    detail.residence = '';
+    detail.burialGps = '';
+    detail.residence = member.residence || '';
     detail.phone = '';
+    detail.wechat = '';
     detail.photo = '';
+    detail.photoGalleryList = [];
+    detail.jobList = [];
   } else {
-    detail.burialPlace = '';
+    detail.burialPlace = member.burialPlace || '';
+    detail.burialGps = String(member.burialGps || member.burialGPS || '').trim();
     detail.residence = member.residence || '';
     detail.phone = member.phone || '';
     detail.wechat = member.wechat || '';
     detail.photo = member.photo || member.avatar || '';
-    if (!detail.photo && Array.isArray(member.photoGallery) && member.photoGallery[0]) {
-      detail.photo = typeof member.photoGallery[0] === 'string'
-        ? member.photoGallery[0]
-        : (member.photoGallery[0].url || '');
-    }
+    detail.photoGalleryList = formatPhotoGalleryList(member.photoGallery, 10);
   }
 
   let honors = Array.isArray(member.honors) ? member.honors.slice() : [];
@@ -483,6 +648,9 @@ function applyDetailDisplay(member, options = {}) {
     ? member.workplaces
     : extractWorkplacesFromRemark(member.remark || '');
   detail.workplaceList = formatWorkplaceList(detail.workplaces);
+  detail.jobList = modern
+    ? formatJobList(member.positions, detail.workplaces)
+    : [];
   detail.positionsList = formatHonorList(
     (member.positions || []).map(p => (typeof p === 'string' ? p : (p.title || '')))
   );
@@ -492,6 +660,13 @@ function applyDetailDisplay(member, options = {}) {
   detail.motherName = detail.motherName || '';
   detail.remark = member.remark || '';
   detail.wechat = detail.wechat || member.wechat || '';
+
+  // 族人姓名统一带「罗」姓（幂等，避免罗罗）
+  try {
+    const { withClanSurname } = require('./clanName');
+    if (detail.name) detail.name = withClanSurname(detail.name);
+    if (detail.fatherName) detail.fatherName = withClanSurname(detail.fatherName);
+  } catch (e) { /* optional */ }
 
   return detail;
 }
@@ -508,6 +683,9 @@ module.exports = {
   formatEraGanzhiDate,
   formatModernDate,
   formatModernLunarLine,
+  formatModernLunarDateOnly,
+  formatModernGanzhi,
+  formatModernZodiac,
   formatModernGregorianLine,
   formatDeathDisplay,
   extractBurialPlace,
@@ -516,6 +694,8 @@ module.exports = {
   formatEducationList,
   formatHonorList,
   formatWorkplaceList,
+  formatJobList,
+  formatPhotoGalleryList,
   applyDetailDisplay,
   toChineseNumeral,
   yearToChineseDigits

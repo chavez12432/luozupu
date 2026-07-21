@@ -1,6 +1,6 @@
 <!--pages/family-tree/family-tree.wxml-->
-<view class="container">
-  <!-- 四堂入口 -->
+<view class="container {{mode === 'hub' ? 'hub-mode' : 'chart-mode'}}">
+  <!-- 四堂入口（静态，立即展示） -->
   <block wx:if="{{mode === 'hub'}}">
     <view class="header">
       <image class="header-logo" src="/images/logo.jpg" mode="aspectFit" />
@@ -9,8 +9,7 @@
     </view>
 
     <view class="hub-body">
-      <view class="loading" wx:if="{{loading}}">加载中...</view>
-      <view class="hall-grid" wx:else>
+      <view class="hall-grid">
         <view
           wx:for="{{halls}}"
           wx:key="branch"
@@ -25,12 +24,12 @@
         </view>
       </view>
       <view class="hub-tip">
-        说明：无父可考者标「断」，与同世其他人并列，表示尚未与上一世续上。
+        说明：世系图仅显示族人姓名；无父可考者标「断」，与同世其他人并列。点进分堂后加载最新数据。
       </view>
     </view>
   </block>
 
-  <!-- 单堂世系图 -->
+  <!-- 单堂世系图（进入后再加载） -->
   <block wx:else>
     <view class="chart-header">
       <view class="chart-title">{{currentBranch}}世系图</view>

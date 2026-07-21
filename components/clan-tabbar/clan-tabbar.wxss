@@ -4,6 +4,9 @@
   border-top: 2rpx solid rgba(193, 154, 75, 0.45);
   padding-bottom: env(safe-area-inset-bottom);
   flex-shrink: 0;
+  /* 保证在各栏目 flex 布局中贴底，不随内容滚动 */
+  position: relative;
+  z-index: 30;
 }
 
 .tab-item {

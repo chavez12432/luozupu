@@ -4,6 +4,7 @@
 const config = require('./config');
 const localDb = require('./localDb');
 const authService = require('./authService');
+const { withClanSurname } = require('./clanName');
 const {
   evaluatePermission,
   pickEditable,
@@ -60,11 +61,18 @@ function getManagePermission(targetId) {
 }
 
 async function callCloud(action, data = {}) {
-  const { result } = await wx.cloud.callFunction({
-    name: 'memberManageApi',
-    data: Object.assign({ action }, data)
-  });
-  return result || { success: false, message: '无响应' };
+  try {
+    const { result } = await wx.cloud.callFunction({
+      name: 'memberManageApi',
+      data: Object.assign({ action }, data)
+    });
+    if (!result) return { success: false, message: '云函数无响应，请确认已部署 memberManageApi' };
+    return result;
+  } catch (err) {
+    console.error('memberManageApi', action, err);
+    const msg = (err && (err.errMsg || err.message)) || '调用失败';
+    return { success: false, message: msg };
+  }
 }
 
 async function getPermission(targetId) {
@@ -107,7 +115,7 @@ function localAddFamily(payload) {
   if (!viewer) return { success: false, message: '请先完成身份认证' };
 
   const relation = payload.relation; // child | spouse
-  const name = String(payload.name || '').trim().replace(/^罗/, '');
+  const name = withClanSurname(String(payload.name || '').trim());
   const gender = payload.gender === '女' ? '女' : '男';
   if (!name) return { success: false, message: '请填写姓名' };
 

@@ -1,210 +1,114 @@
 # 高洲罗氏族谱数据库设计方案
 
+> 人员三表（members / wives / sons_in_law）以 `D:\家谱\database` 四张 Excel 为权威源重建。  
+> ID 形态：族人 `M####` / `C####`；外姓妻 `…W##`；外姓婿 `…S##`；本村配偶直接使用对方族人 ID。  
+> `memberId` 与 `originalId` 同为上述字符串 ID。序文、年号、荣誉、认证集合不在此重建范围内。
+
 ## 一、数据表结构
 
 ### 1. members（罗氏族人主表）
 
 ```javascript
 {
-  _id: String,                    // 唯一ID
-  name: String,                   // 姓名（必填）
-  generation: Number,             // 世代（必填）
-  branch: String,                 // 所属分堂：中和堂/明儒堂/德裕堂/忠爱堂
-  gender: String,                 // 性别：男/女
-  
-  // 生卒信息（农历，默认）
-  birthDate: {
-    lunar: {                      // 农历日期
-      year: Number,               // 年（如1156）
-      month: Number,              // 月（1-12）
-      day: Number,                // 日（1-30）
-      isLeap: Boolean             // 是否闰月
-    },
-    gregorian: {                  // 公历日期（自动计算）
-      year: Number,
-      month: Number,
-      day: Number
-    },
-    dynasty: String,              // 朝代（自动计算）
-    eraName: String,              // 年号（自动计算）
-    eraYear: Number,              // 年号年份（自动计算）
-    ganzhi: String,               // 干支（自动计算）
-    zodiac: String                // 生肖（自动计算）
-  },
-  
-  deathDate: {                    // 逝世日期（结构同birthDate）
-    lunar: { year, month, day, isLeap },
-    gregorian: { year, month, day },
-    dynasty: String,
-    eraName: String,
-    eraYear: Number,
-    ganzhi: String,
-    zodiac: String
-  },
-  
-  isAlive: Boolean,               // 是否在世
-  
-  // 亲属关系
-  fatherId: String,               // 父亲ID
-  motherId: String,               // 母亲ID（关联wives表）
-  spouseId: String,               // 配偶ID（关联wives表）
-  childrenIds: [String],          // 子女ID列表
-  
-  // 个人信息
-  birthplace: String,             // 出生地
-  residence: String,              // 现居地
-  phone: String,                  // 联系电话
-  
-  // 学历（多学历）
-  education: [{
-    degree: String,               // 学历：本科/硕士/博士/博士后/博学鸿儒/进士/举人 等
-    school: String,               // 学校
-    major: String,                // 专业
-    year: Number,                 // 毕业年份
-    isDefault: Boolean            // 是否默认显示
-  }],
-  
-  // 职位（多职位）
-  positions: [{
-    title: String,                // 职位名称
-    organization: String,         // 单位/机构
-    level: String,                // 级别：正国级/副国级/正部级/副部级/正厅级/副厅级/正处级/副处级/正科级/副科级/其他
-    startYear: Number,            // 开始年份
-    endYear: Number,              // 结束年份
-    isDefault: Boolean,           // 是否默认显示
-    isCurrent: Boolean            // 是否现任
-  }],
-  
-  // 荣誉
-  honors: [{
-    type: String,                 // 类型：军人/烈士/荣誉称号/表彰/勋章/学位/科举 等
-    title: String,                // 荣誉名称
-    level: String,                // 级别：国家级/省级/市级/县级/其他
-    year: Number,                 // 获得年份
-    description: String           // 描述
-  }],
-  
-  // 照片
-  avatar: String,                 // 资料照片（单张）
-  photoGallery: [String],         // 照片库（多张）
-  
-  // 系统字段
-  createdAt: Date,
-  updatedAt: Date,
-  createdBy: String,              // 创建者ID
-  updatedBy: String               // 更新者ID
-}
-```
+  _id: String,                    // 与 memberId 相同（本地）；云端导入后可为自动 _id
+  memberId: String,               // 业务 ID，如 M0001 / C0251
+  originalId: String,             // 同 memberId（兼容按 originalId 查询）
+  name: String,
+  gender: String,                 // 男/女/未知
+  generation: Number,
+  branch: String,                 // 中和堂/明儒堂/德裕堂/忠爱堂
+  eraCategory: String,            // ancient | modern（按源表文件归属）
 
-### 2. wives（媳妇表 - 外姓女性嫁入罗家）
+  fatherId: String,               // 父 memberId
+  fatherName: String,
+  motherId: String,               // 多指向 wives.wifeId；本村母可为族人 ID
+  motherName: String,
+  childrenIds: [String],          // 由 fatherId 反向生成
 
-```javascript
-{
-  _id: String,                    // 唯一ID
-  name: String,                   // 姓名（如"王氏"）
-  maidenName: String,              // 娘家姓氏（王）
-  generation: Number,              // 世代（与丈夫同代）
-  
-  // 生卒日期
-  birthDate: {
-    lunar: { year, month, day, isLeap },
-    gregorian: { year, month, day },
-    ganzhi: String,
-    formatted: String
-  },
-  deathDate: {
-    lunar: { year, month, day, isLeap },
-    gregorian: { year, month, day },
-    ganzhi: String,
-    formatted: String
-  },
-  
-  // 婚姻关系
-  husbandId: String,              // 丈夫ID（关联members的originalId）
-  husbandName: String,           // 丈夫姓名
-  marriageType: String,           // 婚配类型：元配/继配/次配/续配/配
-  marriageOrder: Number,          // 第几次婚姻（1=第一次婚姻）
-  
-  // 婚姻状态
-  marriageStatus: String,         // 婚姻状态：married（在婚）/ widowed（丧偶）/ divorced（离异）
-  divorceDate: {                 // 离婚日期
-    lunar: { year, month, day, isLeap },
-    gregorian: { year, month, day }
-  },
-  
-  // 子女（只记录该妻子所生的子女）
-  childrenIds: [String],         // 子女ID列表
-  
-  // 附加信息
-  burialPlace: String,           // 葬地
-  remark: String,                // 备注（如"以子贵，勅赠孺人"）
-  
-  // 来源追溯
-  sourceMemberId: String,        // 来源记录ID（原文所属的罗氏族人）
-  
+  spouseId: String,               // 首个配偶 ID（妻表 ID 或本村族人 ID）
+  spouseIds: [String],
+  wifeIds: [String],              // 兼容旧字段，同 spouseIds
+  spouseName: String,             // 展示名（以妻表为准）
+  spouseInfo: [{                  // 由妻子表生成
+    name, type, hometown, wifeId,
+    isSameVillage: Boolean,
+    linkedMemberId: String
+  }],
+  clanSpouseId: String,           // 本村配偶族人 ID（若有）
+  sonInLawIds: [String],
+  sonInLawNames: [String],
+
+  residence: String,
+  burialPlace: String,
+  lifespan: String,
+  birthDate: { lunar, gregorian, dynasty, ganzhi, zodiac, constellation, raw, converted },
+  deathDate: { /* 同上 */ },
+  isAlive: Boolean,
+
+  phone: String,                  // 现代
+  wechat: String,
+  education: [{ degree, school, year, isDefault }],
+  positions: [{ title, organization, isDefault, isCurrent }],
+  honors: [{ title, type }],
+  gongming: String,               // 古代功名原文
+  guanzhi: String,                // 古代官职原文
+  avatar: String,
+  photoGallery: [String],
+  remark: String,                 // 个人详情
+
+  hasBrokenLineage: Boolean,
+  isPublic: Boolean,
   createdAt: Date,
   updatedAt: Date
 }
 ```
 
-**婚配类型说明：**
-| 类型 | 含义 | marriageOrder |
-|------|------|---------------|
-| 元配 | 原配，第一任妻子 | 1 |
-| 继配/次配 | 续弦，第二任妻子 | 2 |
-| 续配/复配 | 再婚 | 3+ |
-| 配 | 默认婚配 | 1 |
-
-**婚姻状态说明：**
-| 状态 | 含义 |
-|------|------|
-| married | 在婚 |
-| widowed | 丧偶 |
-| divorced | 离异 |
-
-### 3. sons_in_law（女婿表 - 罗氏女儿外嫁的丈夫）
+### 2. wives（妻子表 — 男性族人配偶；含本村女）
 
 ```javascript
 {
   _id: String,
-  name: String,                   // 姓名
-  generation: Number,              // 世代
-  
-  // 生卒日期
-  birthDate: {
-    lunar: { year, month, day, isLeap },
-    gregorian: { year, month, day },
-    ganzhi: String,
-    formatted: String
-  },
-  deathDate: {
-    lunar: { year, month, day, isLeap },
-    gregorian: { year, month, day },
-    ganzhi: String,
-    formatted: String
-  },
-  
-  // 婚姻关系
-  wifeId: String,                 // 妻子ID（关联members的originalId）
-  wifeName: String,              // 妻子姓名
-  marriageOrder: Number,          // 第几次婚姻
-  
-  // 婚姻状态
-  marriageStatus: String,         // 婚姻状态
-  divorceDate: { /* 同上 */ },
-  
-  // 个人信息
-  hometown: String,               // 籍贯/入赘地
-  
-  // 学历、职位、荣誉
-  education: [{ degree, school, major, year }],
-  positions: [{ title, organization, level, startYear, endYear }],
-  honors: [{ type, title, level, year, description }],
-  
-  // 来源
+  wifeId: String,                 // 如 M0001W01；本村人则为族人 ID
+  name: String,
+  maidenName: String,
+  hometown: String,
+  generation: Number,             // 外姓妻与夫同代；本村女可保留自身世代
+  husbandId: String,              // 丈夫 memberId
+  husbandName: String,
+  birthText: String,              // 源表原文日期串
+  deathText: String,
+  burialPlace: String,
+  marriageType: String,           // 配/继配/续配…
+  marriageOrder: Number,
+  marriageStatus: String,         // married 等
+  isSameVillage: Boolean,
+  linkedMemberId: String,         // 本村时 = 女方 memberId
   remark: String,
   sourceMemberId: String,
-  
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+**婚配类型：** 配 / 元配 / 继配 / 次配 / 续配 等，见源表「婚配类型」「婚配序号」。
+
+### 3. sons_in_law（女婿表 — 女性族人配偶；含本村男）
+
+```javascript
+{
+  _id: String,
+  sonInLawId: String,             // 如 M0490S01；本村人则为族人 ID
+  name: String,
+  hometown: String,
+  generation: Number,
+  wifeId: String,                 // 罗氏女 memberId
+  wifeName: String,
+  marriageOrder: Number,
+  marriageStatus: String,
+  isSameVillage: Boolean,
+  linkedMemberId: String,         // 本村时 = 男方 memberId
+  remark: String,
+  sourceMemberId: String,
   createdAt: Date,
   updatedAt: Date
 }

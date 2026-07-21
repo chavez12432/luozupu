@@ -21,7 +21,7 @@
         <image class="hall-logo" src="/images/logo.jpg" mode="aspectFit" />
         <view class="hall-text">
           <view class="hall-title">江西安福高洲罗氏</view>
-          <view class="hall-sub" wx:if="{{accountName}}">您好，{{accountName}}</view>
+          <view class="hall-sub" wx:if="{{accountName}}" style="width: 383rpx; height: 85rpx; display: block; box-sizing: border-box">您好，{{accountName}}</view>
           <view class="hall-sub" wx:else>数字宗祠大厅</view>
         </view>
       </view>

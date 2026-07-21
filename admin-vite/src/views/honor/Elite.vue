@@ -5,13 +5,16 @@
         <div class="card-header">
           <div class="header-row">
             <span>建国后群英榜（当今族人撷英）</span>
-            <el-button type="warning" :loading="resetting" @click="resetHeroes">
-              清空旧关联并重置为七人小传
-            </el-button>
+            <div>
+              <el-button type="primary" @click="$router.push('/honor/elite/form')">添加群英</el-button>
+              <el-button type="warning" :loading="resetting" @click="resetHeroes">
+                清空旧关联并重置为七人小传
+              </el-button>
+            </div>
           </div>
           <el-alert type="info" :closable="false" show-icon>
             <template #title>
-              展示《当今族人撷英》七人：相文、传芳、建新、国才、德才、庆良、志坚。点击可查看小传。
+              姓名等从关联族人联动；本榜维护简介与小传。点「编辑」改小传，「打开族人」改基础资料。
             </template>
           </el-alert>
         </div>
@@ -20,19 +23,27 @@
       <el-table :data="tableData" border v-loading="loading">
         <el-table-column type="index" label="序号" width="70" />
         <el-table-column prop="name" label="姓名" width="100" />
+        <el-table-column prop="originalId" label="族谱ID" width="100" show-overflow-tooltip />
         <el-table-column prop="branch" label="堂份" width="100" />
         <el-table-column prop="generation" label="世代" width="80">
           <template #default="scope">
             <el-tag type="success">{{ scope.row.generation }}世</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="summary" label="简介" min-width="260" show-overflow-tooltip />
+        <el-table-column prop="summary" label="简介" min-width="200" show-overflow-tooltip />
         <el-table-column prop="achievementType" label="类型" width="90" />
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="关联" width="90">
           <template #default="scope">
-            <el-button type="primary" size="small" @click="viewBio(scope.row)">
-              查看小传
-            </el-button>
+            <el-tag :type="scope.row.hasLink || scope.row.memberDocId ? 'success' : 'warning'" size="small">
+              {{ scope.row.hasLink || scope.row.memberDocId ? '已关联' : '未关联' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="280" fixed="right">
+          <template #default="scope">
+            <el-button type="primary" size="small" @click="viewBio(scope.row)">小传</el-button>
+            <el-button size="small" @click="$router.push('/honor/elite/form?id=' + scope.row._id)">编辑</el-button>
+            <el-button size="small" :disabled="!scope.row.memberDocId" @click="openMember(scope.row)">打开族人</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -51,9 +62,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { eliteApi, initCloud } from '../../api/cloudApi.js'
 
+const router = useRouter()
 const tableData = ref([])
 const loading = ref(false)
 const resetting = ref(false)
@@ -66,10 +79,15 @@ const loadData = async () => {
     const res = await eliteApi.getList({ pageSize: 100 })
     if (res && res.success) {
       tableData.value = res.data || []
+      if (!tableData.value.length) {
+        ElMessage.info('群英榜为空，可点击「重置为七人小传」导入当今族人撷英')
+      }
+    } else {
+      ElMessage.error(res?.message || '加载失败')
     }
   } catch (err) {
     console.error('加载失败:', err)
-    ElMessage.error('加载失败')
+    ElMessage.error(err.message || '加载失败')
   } finally {
     loading.value = false
   }
@@ -88,6 +106,10 @@ const viewBio = async (row) => {
     }
   }
   bioVisible.value = true
+}
+
+const openMember = (row) => {
+  if (row.memberDocId) router.push(`/members/edit/${row.memberDocId}`)
 }
 
 const resetHeroes = async () => {

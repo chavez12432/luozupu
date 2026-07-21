@@ -27,17 +27,26 @@ Page({
   },
 
   onShow() {
-    const verified = authGuard.checkVerified();
-    const account = authService.getCachedAccount();
-    this.setData({
-      isVerified: verified,
-      accountName: (account && account.name) || ''
-    });
-    if (verified) {
-      this.updateGenerationRange();
-      if (!this.data.members.length) {
-        this.loadMembers(true);
+    const app = getApp();
+    const ready = app && app.globalData && app.globalData.authReadyPromise;
+    const apply = () => {
+      const verified = authGuard.checkVerified();
+      const account = authService.getCachedAccount();
+      this.setData({
+        isVerified: verified,
+        accountName: (account && account.name) || ''
+      });
+      if (verified) {
+        this.updateGenerationRange();
+        if (!this.data.members.length) {
+          this.loadMembers(true);
+        }
       }
+    };
+    if (ready && typeof ready.then === 'function') {
+      ready.then(apply).catch(apply);
+    } else {
+      apply();
     }
   },
 

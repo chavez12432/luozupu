@@ -3,14 +3,14 @@
     <view class="auth-title">人工申诉</view>
     <view class="auth-desc">若族谱资料有误或无法通过验证，请填写以下信息，管理员将人工核实。</view>
 
-    <text class="auth-label">姓名</text>
-    <input class="auth-input" value="{{name}}" bindinput="onField" data-field="name" placeholder="您的名字" />
+    <text class="auth-label">本人全名</text>
+    <input class="auth-input" value="{{name}}" bindinput="onField" data-field="name" placeholder="例如：罗青兰（须含罗姓）" />
 
     <text class="auth-label">出生日期说明</text>
     <input class="auth-input" value="{{birthHint}}" bindinput="onField" data-field="birthHint" placeholder="如：农历1960年三月初五" />
 
-    <text class="auth-label">父亲姓名</text>
-    <input class="auth-input" value="{{fatherHint}}" bindinput="onField" data-field="fatherHint" placeholder="父亲名字" />
+    <text class="auth-label">父亲全名</text>
+    <input class="auth-input" value="{{fatherHint}}" bindinput="onField" data-field="fatherHint" placeholder="例如：罗冬香（须含罗姓）" />
 
     <text class="auth-label">联系电话</text>
     <input class="auth-input" type="number" maxlength="11" value="{{phone}}" bindinput="onField" data-field="phone" placeholder="便于联系您" />

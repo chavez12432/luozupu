@@ -410,7 +410,7 @@ export const sonsInLawApi = {
 };
 
 /**
- * 族长 API
+ * 荣誉榜 API：列表/读写走 adminApi（hydrate 族人 + 薄表字段）
  */
 export const patriarchsApi = {
   async getList(params = {}) {
@@ -481,6 +481,9 @@ export const eliteApi = {
   },
   async resetHeroes() {
     return await callCloudFunctionHTTP('adminApi', { action: 'resetEliteHeroes' });
+  },
+  async migrateLinks() {
+    return await callCloudFunctionHTTP('adminApi', { action: 'migrateHonorMemberLinks' });
   }
 };
 
@@ -530,6 +533,17 @@ export const opsApi = {
     } catch (error) {
       console.error('获取登录账号失败:', error);
       return { success: false, message: error.message, data: [], total: 0 };
+    }
+  },
+  async forceUnbindAccount(accountId) {
+    try {
+      return await callCloudFunctionHTTP('adminApi', {
+        action: 'forceUnbindAccount',
+        data: { _id: accountId }
+      });
+    } catch (error) {
+      console.error('强制解绑失败:', error);
+      return { success: false, message: error.message };
     }
   },
   async listDevMessages(params = {}) {

@@ -17,11 +17,15 @@ function genLabel(n) {
   return GEN_CN[g] ? `${GEN_CN[g]}世` : `${g}世`;
 }
 
-function spouseText(m) {
-  if (Array.isArray(m.spouseInfo) && m.spouseInfo.length) {
-    return m.spouseInfo.map(s => s.name).filter(Boolean).join('·');
-  }
-  return m.spouseName || '';
+function spouseText(_m) {
+  // 世系图仅展示族人姓名，不显示妻子
+  return '';
+}
+
+function compareMemberKey(a, b) {
+  const ao = String((a && (a.originalId || a.memberId)) || '');
+  const bo = String((b && (b.originalId || b.memberId)) || '');
+  return ao.localeCompare(bo, undefined, { numeric: true });
 }
 
 function isDirtyBranch(branch) {
@@ -96,7 +100,7 @@ function buildPedigreeLayout(members, branch, options = {}) {
 
   Object.keys(nodeMap).forEach(id => {
     const n = nodeMap[id];
-    n.children.sort((a, b) => (nodeMap[a].originalId || 0) - (nodeMap[b].originalId || 0));
+    n.children.sort((a, b) => compareMemberKey(nodeMap[a], nodeMap[b]));
   });
 
   const roots = [];
@@ -134,10 +138,10 @@ function buildPedigreeLayout(members, branch, options = {}) {
 
   const primaryRoots = roots
     .filter(r => !r.broken || r.generation === minGen)
-    .sort((a, b) => a.generation - b.generation || (a.originalId || 0) - (b.originalId || 0));
+    .sort((a, b) => a.generation - b.generation || compareMemberKey(a, b));
   const brokenRoots = roots
     .filter(r => r.broken && r.generation !== minGen)
-    .sort((a, b) => a.generation - b.generation || (a.originalId || 0) - (b.originalId || 0));
+    .sort((a, b) => a.generation - b.generation || compareMemberKey(a, b));
   const orderedRoots = primaryRoots.concat(brokenRoots);
 
   function leafCount(node, memo) {
@@ -218,14 +222,8 @@ function buildPedigreeLayout(members, branch, options = {}) {
     });
   }
 
-  const hitAreas = nodes.map(n => ({
-    id: n.id,
-    name: n.name,
-    x: n.px - COL_W * 0.5,
-    y: n.py - 6,
-    w: COL_W + (n.spouse ? Math.min(22, COL_W * 0.7) : 0),
-    h: ROW_H - 28
-  }));
+  // 世系图仅展示，不提供点击跳转热区
+  const hitAreas = [];
 
   return {
     nodes,
@@ -257,11 +255,9 @@ function drawPedigree(ctx, layout, options = {}) {
   } = layout;
   const lineColor = options.lineColor || '#c62828';
   const nameColor = options.nameColor || '#222';
-  const spouseColor = options.spouseColor || '#9e9e9e';
   const brokenColor = options.brokenColor || '#b0a090';
   const labelColor = options.labelColor || '#8d6e63';
   const fontSize = Math.max(10, Math.min(15, Math.floor(colW * 0.42)));
-  const spouseSize = Math.max(8, fontSize - 3);
 
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = '#fffef9';
@@ -330,7 +326,7 @@ function drawPedigree(ctx, layout, options = {}) {
     ctx.fillText('断', x, y - 28);
   });
 
-  // 人名竖排 + 配氏
+  // 人名竖排（仅族人，不绘制妻子）
   nodes.forEach(n => {
     const chars = String(n.name || '').split('');
     ctx.fillStyle = n.broken ? '#5d4037' : nameColor;
@@ -340,14 +336,6 @@ function drawPedigree(ctx, layout, options = {}) {
     chars.forEach((ch, i) => {
       ctx.fillText(ch, n.px, n.py + i * (fontSize + 1));
     });
-    if (n.spouse) {
-      const sp = String(n.spouse).replace(/·/g, '').slice(0, 6).split('');
-      ctx.fillStyle = spouseColor;
-      ctx.font = `${spouseSize}px sans-serif`;
-      sp.forEach((ch, i) => {
-        ctx.fillText(ch, n.px + colW * 0.42, n.py + i * (spouseSize + 1));
-      });
-    }
   });
 
   // 底部图例

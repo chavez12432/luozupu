@@ -15,13 +15,13 @@ exports.main = async (event, context) => {
       
       // 1. 创建族长表初始数据
       const patriarchsData = [
-        { name: '公瑾', title: '一世基祖', generation: 1, branch: '中和堂', branchTitle: '初代基祖', originRegion: '未知', achievements: '罗氏迁高洲始祖', sortOrder: 1 },
-        { name: '浩然', title: '十一世', generation: 11, branch: '中和堂', branchTitle: '安福基祖', originRegion: '安福', achievements: '安福分支始祖', sortOrder: 2 },
-        { name: '原', title: '十四世', generation: 14, branch: '忠爱堂', branchTitle: '鹧湖基祖', originRegion: '鹧湖', achievements: '鹧湖分支始祖', sortOrder: 3 },
-        { name: '筮元', title: '十六世', generation: 16, branch: '德裕堂', branchTitle: '高洲基祖', originRegion: '高洲', achievements: '高洲分支始祖', sortOrder: 4 },
-        { name: '英', title: '十八世', generation: 18, branch: '明儒堂', branchTitle: '明儒堂基祖', originRegion: '高洲', achievements: '明儒堂始祖', sortOrder: 5 },
-        { name: '华', title: '十八世', generation: 18, branch: '德裕堂', branchTitle: '德裕堂基祖', originRegion: '高洲', achievements: '德裕堂始祖', sortOrder: 6 },
-        { name: '芬', title: '十八世', generation: 18, branch: '忠爱堂', branchTitle: '忠爱堂基祖', originRegion: '高洲', achievements: '忠爱堂始祖', sortOrder: 7 }
+        { name: '罗公瑾', title: '一世基祖', generation: 1, branch: '中和堂', branchTitle: '初代基祖', originRegion: '未知', achievements: '罗氏迁高洲始祖', sortOrder: 1 },
+        { name: '罗浩然', title: '十一世', generation: 11, branch: '中和堂', branchTitle: '安福基祖', originRegion: '安福', achievements: '安福分支始祖', sortOrder: 2 },
+        { name: '罗原', title: '十四世', generation: 14, branch: '忠爱堂', branchTitle: '鹧湖基祖', originRegion: '鹧湖', achievements: '鹧湖分支始祖', sortOrder: 3 },
+        { name: '罗筮元', title: '十六世', generation: 16, branch: '德裕堂', branchTitle: '高洲基祖', originRegion: '高洲', achievements: '高洲分支始祖', sortOrder: 4 },
+        { name: '罗英', title: '十八世', generation: 18, branch: '明儒堂', branchTitle: '明儒堂基祖', originRegion: '高洲', achievements: '明儒堂始祖', sortOrder: 5 },
+        { name: '罗华', title: '十八世', generation: 18, branch: '德裕堂', branchTitle: '德裕堂基祖', originRegion: '高洲', achievements: '德裕堂始祖', sortOrder: 6 },
+        { name: '罗芬', title: '十八世', generation: 18, branch: '忠爱堂', branchTitle: '忠爱堂基祖', originRegion: '高洲', achievements: '忠爱堂始祖', sortOrder: 7 }
       ];
       
       // 添加族长数据

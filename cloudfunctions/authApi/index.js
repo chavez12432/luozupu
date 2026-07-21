@@ -1,8 +1,9 @@
 /**
  * 用户身份验证与账号绑定云函数
- * actions: getSession | verifyName | verifyBirthday | verifyFather | bindPhone | submitAppeal
+ * actions: getSession | resetMyBinding | verifyName | verifyBirthday | verifyFather | bindPhone | submitAppeal
  */
 const cloud = require('wx-server-sdk');
+const { withClanSurname } = require('./clanName');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -23,10 +24,16 @@ function fail(message, extra = {}) {
   return Object.assign({ success: false, message }, extra);
 }
 
-function normalizeName(input) {
-  let name = String(input || '').trim();
-  if (name.startsWith('罗')) name = name.slice(1);
-  return name;
+/**
+ * 验证用全名：须以「罗」开头，并规范为「罗+名」（消除罗罗）
+ * 未带姓返回 null
+ */
+function normalizeFullName(input) {
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  if (!raw.startsWith('罗')) return null;
+  const full = withClanSurname(raw);
+  return full && full.length > 1 ? full : null;
 }
 
 function getLunar(member) {
@@ -116,7 +123,7 @@ async function loadMembersByIds(ids) {
 }
 
 async function resolveFatherName(member) {
-  if (member.fatherName) return normalizeName(member.fatherName);
+  if (member.fatherName) return withClanSurname(member.fatherName);
   if (member.fatherId === '' || member.fatherId == null) return '';
   const res = await db.collection(COL_MEMBERS)
     .where({ originalId: _.eq(Number(member.fatherId)) })
@@ -137,7 +144,7 @@ async function resolveFatherName(member) {
       .get();
     father = res3.data[0];
   }
-  return father ? normalizeName(father.name) : '';
+  return father ? withClanSurname(father.name) : '';
 }
 
 async function getSession() {
@@ -147,6 +154,25 @@ async function getSession() {
   if (!account) {
     return ok({ verified: false, account: null });
   }
+
+  // 人员库重建后 personId 可能已失效：自动清除陈旧绑定
+  if (account.personId) {
+    const memberRes = await db.collection(COL_MEMBERS).doc(account.personId).get().catch(() => null);
+    if (!memberRes || !memberRes.data) {
+      try {
+        await db.collection(COL_ACCOUNTS).doc(account._id).remove();
+      } catch (e) {
+        console.log('remove stale account failed', e.message || e);
+      }
+      return ok({
+        verified: false,
+        account: null,
+        staleBinding: true,
+        message: '原关联成员已不存在，旧绑定已清除，请重新完成身份验证'
+      });
+    }
+  }
+
   return ok({
     verified: true,
     account: {
@@ -159,6 +185,64 @@ async function getSession() {
       originalId: account.originalId,
       wechatId: account.wechatId || ''
     }
+  });
+}
+
+/**
+ * 清除当前微信的认证绑定，便于人员库重建后重新走验证流程
+ */
+async function resetMyBinding() {
+  const { openid } = await getOpenId();
+  if (!openid) return fail('无法获取微信身份');
+
+  const account = await findAccountByOpenId(openid);
+  let removedAccount = false;
+  let clearedMemberBind = false;
+
+  if (account) {
+    // 解除成员上的绑定标记（若有）
+    if (account.personId) {
+      try {
+        await db.collection(COL_MEMBERS).doc(account.personId).update({
+          data: {
+            boundOpenId: _.remove(),
+            boundAccountId: _.remove(),
+            boundPhone: _.remove(),
+            updatedAt: db.serverDate()
+          }
+        });
+        clearedMemberBind = true;
+      } catch (e) {
+        // 成员可能已不存在
+        console.log('clear member bind skip', e.message || e);
+      }
+    }
+    await db.collection(COL_ACCOUNTS).doc(account._id).remove();
+    removedAccount = true;
+  }
+
+  // 清理本 openid 下未过期的验证票据（分页）
+  let ticketRemoved = 0;
+  try {
+    for (;;) {
+      const { data } = await db.collection(COL_TICKETS)
+        .where({ openid })
+        .limit(50)
+        .get();
+      if (!data || !data.length) break;
+      await Promise.all(data.map(doc => db.collection(COL_TICKETS).doc(doc._id).remove()));
+      ticketRemoved += data.length;
+      if (data.length < 50) break;
+    }
+  } catch (e) {
+    console.log('clear tickets skip', e.message || e);
+  }
+
+  return ok({
+    message: '已清除本微信的认证绑定，请重新验证',
+    removedAccount,
+    clearedMemberBind,
+    ticketRemoved
   });
 }
 
@@ -175,14 +259,19 @@ async function verifyName(params) {
   const existing = await findAccountByOpenId(openid);
   if (existing) return fail('该微信已绑定族谱账号', { code: 'ALREADY_BOUND' });
 
-  const name = normalizeName(params.name);
-  if (!name) return fail('请输入姓名');
+  const name = normalizeFullName(params.name);
+  if (name === '') return fail('请输入姓名');
+  if (name == null) {
+    return fail('请输入含「罗」姓的全名，例如：罗青兰', {
+      code: 'NEED_FULL_NAME'
+    });
+  }
 
   const res = await db.collection(COL_MEMBERS).where({ name }).limit(100).get();
   const matches = res.data || [];
 
   if (!matches.length) {
-    return fail('未找到您的族谱信息。请确认姓名是否正确。', {
+    return fail('未找到您的族谱信息。请确认全名是否正确（须含「罗」姓）。', {
       code: 'NOT_FOUND',
       canAppeal: true
     });
@@ -253,8 +342,13 @@ async function verifyFather(params) {
     return fail('请先完成出生日期验证');
   }
 
-  const fatherName = normalizeName(params.fatherName);
-  if (!fatherName) return fail('请输入父亲姓名');
+  const fatherName = normalizeFullName(params.fatherName);
+  if (fatherName === '') return fail('请输入父亲姓名');
+  if (fatherName == null) {
+    return fail('请输入父亲含「罗」姓的全名，例如：罗鼓声', {
+      code: 'NEED_FULL_NAME'
+    });
+  }
 
   const members = await loadMembersByIds(ticket.candidatePersonIds || []);
   const matched = [];
@@ -347,7 +441,15 @@ async function bindPhone(params) {
 
   const byPhone = await db.collection(COL_ACCOUNTS).where({ phone }).limit(1).get();
   if (byPhone.data.length) {
-    return fail('该手机号已绑定其他族谱账号', { code: 'PHONE_BOUND' });
+    const other = byPhone.data[0];
+    const otherMember = other.personId
+      ? await db.collection(COL_MEMBERS).doc(other.personId).get().catch(() => null)
+      : null;
+    if (!otherMember || !otherMember.data) {
+      await db.collection(COL_ACCOUNTS).doc(other._id).remove();
+    } else {
+      return fail('该手机号已绑定其他族谱账号', { code: 'PHONE_BOUND' });
+    }
   }
 
   const byPerson = await db.collection(COL_ACCOUNTS).where({ personId }).limit(1).get();
@@ -521,6 +623,8 @@ exports.main = async (event) => {
     switch (action) {
       case 'getSession':
         return await getSession();
+      case 'resetMyBinding':
+        return await resetMyBinding();
       case 'verifyName':
         return await verifyName(data);
       case 'verifyBirthday':

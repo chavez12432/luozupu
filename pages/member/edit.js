@@ -65,18 +65,29 @@ Page({
       });
       return;
     }
+    // 云函数已解析出的真实文档 _id（优先）
+    const preferredId = permRes.targetId || targetId;
 
     let member = null;
     if (config.isLocalMode()) {
       localDb.init();
-      member = localDb.findById('members', targetId);
+      member = localDb.findById('members', preferredId) || localDb.findById('members', targetId);
     } else {
       try {
         const db = wx.cloud.database();
-        const doc = await db.collection('members').doc(targetId).get();
+        const doc = await db.collection('members').doc(preferredId).get();
         member = doc.data;
+        if (member && !member._id) member._id = preferredId;
       } catch (e) {
-        member = null;
+        try {
+          const db = wx.cloud.database();
+          const q = await db.collection('members').where({
+            originalId: targetId
+          }).limit(1).get();
+          member = (q.data && q.data[0]) || null;
+        } catch (e2) {
+          member = null;
+        }
       }
     }
 
@@ -84,9 +95,16 @@ Page({
       wx.showToast({ title: '成员不存在', icon: 'none' });
       return;
     }
+    // 后续保存一律用云文档 _id
+    const resolvedId = member._id || preferredId || targetId;
 
     const account = authService.getCachedAccount();
-    const isSelf = !!(account && account.personId === targetId);
+    const isSelf = !!(account && (
+      account.personId === resolvedId ||
+      account.personId === targetId ||
+      account.personId === member.originalId ||
+      account.personId === member.memberId
+    ));
     const isModern = isModernMember(member);
     const lunar = (member.birthDate && member.birthDate.lunar) || {};
     const greg = (member.birthDate && member.birthDate.gregorian) || {};
@@ -108,7 +126,7 @@ Page({
     }));
 
     this.setData({
-      targetId,
+      targetId: resolvedId,
       isModern,
       isSelf,
       genderIndex: member.gender === '女' ? 1 : 0,
@@ -165,17 +183,23 @@ Page({
       this.setData({ birthPreviewLunar: '', birthPreviewGregorian: '' });
       return;
     }
-    // 同步另一侧输入框
+    // 同步另一侧输入框（互转成功才覆盖；兜底结构可能只有一侧）
+    const lunar = full.lunar || {};
+    const gregorian = full.gregorian || {};
     const patch = {
       birthPreviewLunar: formatModernLunarLine(full) || '',
-      birthPreviewGregorian: formatModernGregorianLine(full) || '',
-      'form.lYear': full.lunar.year,
-      'form.lMonth': full.lunar.month,
-      'form.lDay': full.lunar.day,
-      'form.gYear': full.gregorian.year,
-      'form.gMonth': full.gregorian.month,
-      'form.gDay': full.gregorian.day
+      birthPreviewGregorian: formatModernGregorianLine(full) || ''
     };
+    if (lunar.year && lunar.month && lunar.day) {
+      patch['form.lYear'] = lunar.year;
+      patch['form.lMonth'] = lunar.month;
+      patch['form.lDay'] = lunar.day;
+    }
+    if (gregorian.year && gregorian.month && gregorian.day) {
+      patch['form.gYear'] = gregorian.year;
+      patch['form.gMonth'] = gregorian.month;
+      patch['form.gDay'] = gregorian.day;
+    }
     this.setData(patch);
   },
 
@@ -220,13 +244,31 @@ Page({
     return null;
   },
 
+  hasBirthInput() {
+    const { form, calendarIndex, calendarTypes } = this.data;
+    const type = calendarTypes[calendarIndex].value;
+    if (type === 'lunar') return !!(form.lYear && form.lMonth && form.lDay);
+    return !!(form.gYear && form.gMonth && form.gDay);
+  },
+
   async submit() {
     if (this.data.loading) return;
     this.setData({ loading: true });
     wx.showLoading({ title: '保存中...' });
     try {
+      await preloadLunarLib();
       const form = this.data.form;
       const birthDate = this.buildBirthDate();
+      if (this.hasBirthInput() && !birthDate) {
+        wx.hideLoading();
+        this.setData({ loading: false });
+        wx.showModal({
+          title: '生日无效',
+          content: '请检查年月日是否填写正确',
+          showCancel: false
+        });
+        return;
+      }
       const patch = {
         name: form.name,
         gender: this.data.genders[this.data.genderIndex],
@@ -252,7 +294,11 @@ Page({
       wx.hideLoading();
       this.setData({ loading: false });
       if (!res.success) {
-        wx.showToast({ title: res.message || '保存失败', icon: 'none' });
+        wx.showModal({
+          title: '保存失败',
+          content: res.message || '请确认已部署云函数 memberManageApi',
+          showCancel: false
+        });
         return;
       }
       wx.showToast({ title: '已保存', icon: 'success' });

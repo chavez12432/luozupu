@@ -86,12 +86,18 @@ const routes = [
         component: () => import('../views/sons-in-law/Form.vue'),
         meta: { title: '女婿表单' }
       },
-      // 荣誉榜路由（只读，数据从族人管理关联）
+      // 荣誉榜（云库可运营）
       {
         path: 'honor/patriarchs',
         name: 'Patriarchs',
         component: () => import('../views/honor/Patriarchs.vue'),
         meta: { title: '族长表' }
+      },
+      {
+        path: 'honor/patriarchs/form',
+        name: 'PatriarchForm',
+        component: () => import('../views/honor/PatriarchsForm.vue'),
+        meta: { title: '族长表单' }
       },
       {
         path: 'honor/sages',
@@ -100,10 +106,22 @@ const routes = [
         meta: { title: '乡贤榜' }
       },
       {
+        path: 'honor/sages/form',
+        name: 'SageForm',
+        component: () => import('../views/honor/SagesForm.vue'),
+        meta: { title: '乡贤表单' }
+      },
+      {
         path: 'honor/elite',
         name: 'Elite',
         component: () => import('../views/honor/Elite.vue'),
         meta: { title: '群英榜' }
+      },
+      {
+        path: 'honor/elite/form',
+        name: 'EliteForm',
+        component: () => import('../views/honor/EliteForm.vue'),
+        meta: { title: '群英表单' }
       },
       {
         path: 'honor/graduates',

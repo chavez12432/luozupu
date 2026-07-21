@@ -16,7 +16,12 @@
       >
         <view class="patriarch-icon">👑</view>
         <view class="patriarch-info">
-          <view class="patriarch-name">{{item.name}}</view>
+          <view
+            class="patriarch-name {{item.hasLink || item.memberDocId ? 'link' : ''}}"
+            data-id="{{item.memberDocId}}"
+            data-link="{{item.hasLink || !!item.memberDocId}}"
+            bindtap="viewMember"
+          >{{item.name}}</view>
           <view class="patriarch-title">{{item.title}}</view>
           <view class="patriarch-meta">
             <text class="branch-tag">{{item.branch}}</text>

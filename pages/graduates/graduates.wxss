@@ -130,6 +130,12 @@
   font-size: 26rpx;
 }
 
+.edu-display {
+  flex: 1;
+  color: #333;
+  line-height: 1.5;
+}
+
 .edu-degree {
   min-width: 88rpx;
   padding: 2rpx 12rpx;

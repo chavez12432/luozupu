@@ -1,5 +1,6 @@
 /**
- * 公历 / 农历互转（lunar 在分包，仅编辑页等按需加载）
+ * 公历 / 农历互转
+ * lunar.js 放在 utils/vendor，按需同步/异步加载；库未就绪时用年月日兜底结构。
  */
 const ZODIAC = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
 const TIAN_GAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
@@ -27,9 +28,25 @@ function applyLib(lib) {
   return !!(Solar && Lunar);
 }
 
-/** 按需加载分包农历库；失败时静默降级，不影响族人列表 */
+function tryRequireSync() {
+  try {
+    // 主包路径（需未在 packOptions.ignore 中排除）
+    // eslint-disable-next-line global-require
+    return applyLib(require('./vendor/lunar.js'));
+  } catch (e1) {
+    try {
+      // eslint-disable-next-line global-require
+      return applyLib(require('../pkg-local/vendor/lunar.js'));
+    } catch (e2) {
+      return false;
+    }
+  }
+}
+
+/** 按需加载农历库；失败时静默降级，不影响其它功能 */
 function preloadLunarLib() {
   if (Solar && Lunar) return Promise.resolve(true);
+  if (tryRequireSync()) return Promise.resolve(true);
   if (loadingPromise) return loadingPromise;
 
   loadingPromise = new Promise((resolve) => {
@@ -37,16 +54,22 @@ function preloadLunarLib() {
 
     const loadModule = () => {
       if (typeof require.async !== 'function') {
-        done(false);
+        done(tryRequireSync());
         return;
       }
-      require.async('../pkg-local/vendor/lunar.js')
-        .then((lib) => done(applyLib(lib)))
-        .catch((err) => {
-          // 常见：{ mod, errMsg } / errcode -2（取消或分包未就绪）
-          console.warn('[dateConvert] lunar 异步加载失败（可忽略，仅影响历法互转）', err);
-          loadingPromise = null; // 允许重试
-          done(false);
+      const tryAsync = (path) =>
+        require.async(path)
+          .then((lib) => applyLib(lib))
+          .catch(() => false);
+
+      tryAsync('./vendor/lunar.js')
+        .then((ok) => (ok ? true : tryAsync('../pkg-local/vendor/lunar.js')))
+        .then((ok) => {
+          if (!ok) {
+            console.warn('[dateConvert] lunar 异步加载失败（仅影响历法互转）');
+            loadingPromise = null;
+          }
+          done(ok);
         });
     };
 
@@ -58,10 +81,9 @@ function preloadLunarLib() {
     wx.loadSubpackage({
       name: 'pkg-local',
       success: loadModule,
-      fail: (err) => {
-        console.warn('[dateConvert] pkg-local 加载失败（可忽略）', err);
-        loadingPromise = null;
-        done(false);
+      fail: () => {
+        // 无分包时仍尝试主包/相对路径
+        loadModule();
       }
     });
   });
@@ -73,12 +95,46 @@ function isLunarReady() {
   return !!(Solar && Lunar);
 }
 
+function fallbackFromLunar(y, m, d, isLeap) {
+  const gz = getGanzhiZodiac(y);
+  const leap = !!isLeap;
+  return {
+    lunar: {
+      year: y,
+      month: m,
+      day: d,
+      isLeap: leap,
+      formatted: `${y}年${leap ? '闰' : ''}${m}月${d}日`
+    },
+    gregorian: {},
+    ganzhi: gz.ganzhi ? `${gz.ganzhi}年` : '',
+    zodiac: gz.zodiac,
+    converted: false
+  };
+}
+
+function fallbackFromGregorian(y, m, d) {
+  const gz = getGanzhiZodiac(y);
+  return {
+    lunar: {},
+    gregorian: {
+      year: y,
+      month: m,
+      day: d,
+      formatted: `${y}年${m}月${d}日`
+    },
+    ganzhi: gz.ganzhi ? `${gz.ganzhi}年` : '',
+    zodiac: gz.zodiac,
+    converted: false
+  };
+}
+
 function fromGregorian(year, month, day) {
   const y = Number(year);
   const m = Number(month);
   const d = Number(day);
   if (!y || !m || !d) return null;
-  if (!isLunarReady()) return null;
+  if (!isLunarReady()) return fallbackFromGregorian(y, m, d);
   try {
     const solar = Solar.fromYmd(y, m, d);
     const lunar = solar.getLunar();
@@ -103,7 +159,7 @@ function fromGregorian(year, month, day) {
     };
   } catch (e) {
     console.warn('[dateConvert] fromGregorian failed', e);
-    return null;
+    return fallbackFromGregorian(y, m, d);
   }
 }
 
@@ -112,7 +168,7 @@ function fromLunar(year, month, day, isLeap) {
   const m = Number(month);
   const d = Number(day);
   if (!y || !m || !d) return null;
-  if (!isLunarReady()) return null;
+  if (!isLunarReady()) return fallbackFromLunar(y, m, d, isLeap);
   try {
     const lunarMonth = isLeap ? -m : m;
     const lunar = Lunar.fromYmd(y, lunarMonth, d);
@@ -138,7 +194,7 @@ function fromLunar(year, month, day, isLeap) {
     };
   } catch (e) {
     console.warn('[dateConvert] fromLunar failed', e);
-    return null;
+    return fallbackFromLunar(y, m, d, isLeap);
   }
 }
 
@@ -149,11 +205,11 @@ function enrichBirthDate(dateObj) {
   const g = dateObj.gregorian || {};
   if (lunar.year && lunar.month && lunar.day) {
     const full = fromLunar(lunar.year, lunar.month, lunar.day, lunar.isLeap);
-    if (full) return Object.assign({}, dateObj, full);
+    if (full && full.converted) return Object.assign({}, dateObj, full);
   }
   if (g.year && g.month && g.day) {
     const full = fromGregorian(g.year, g.month, g.day);
-    if (full) return Object.assign({}, dateObj, full);
+    if (full && full.converted) return Object.assign({}, dateObj, full);
   }
   return dateObj;
 }

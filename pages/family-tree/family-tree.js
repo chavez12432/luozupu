@@ -1,12 +1,13 @@
 // pages/family-tree/family-tree.js
 const { buildPedigreeLayout, drawPedigree } = require('../../utils/pedigreeLayout');
+const { FAMILY_TREE_HALLS } = require('../../utils/familyTreeHalls');
 const authGuard = require('../../utils/authGuard');
 const nav = require('../../utils/nav');
 
 Page({
   data: {
     mode: 'hub',
-    halls: [],
+    halls: FAMILY_TREE_HALLS,
     currentBranch: '',
     loading: false,
     stats: null,
@@ -22,29 +23,12 @@ Page({
 
   onLoad() {
     if (!authGuard.requireAuth({ replace: true })) return;
-    this.loadHub();
+    // 四堂入口用静态数据，不请求云端
+    this.setData({ mode: 'hub', halls: FAMILY_TREE_HALLS, loading: false });
   },
 
   onShow() {
     authGuard.requireAuth({ replace: true });
-  },
-
-  async loadHub() {
-    this.setData({ loading: true, mode: 'hub' });
-    try {
-      const res = await wx.cloud.callFunction({
-        name: 'adminApi',
-        data: { action: 'getFamilyTree' }
-      });
-      if (res.result && res.result.success) {
-        this.setData({ halls: res.result.data.halls || [] });
-      }
-    } catch (err) {
-      console.error(err);
-      wx.showToast({ title: '加载失败', icon: 'none' });
-    } finally {
-      this.setData({ loading: false });
-    }
   },
 
   openHall(e) {
@@ -56,7 +40,16 @@ Page({
   backToHub() {
     this.layout = null;
     this.canvasNode = null;
-    this.loadHub();
+    this.setData({
+      mode: 'hub',
+      loading: false,
+      currentBranch: '',
+      stats: null,
+      displayWidth: 0,
+      displayHeight: 0,
+      scale: 1,
+      scaleLabel: '100%'
+    });
   },
 
   async loadChart(branch) {
@@ -73,7 +66,6 @@ Page({
       const layout = buildPedigreeLayout(members, branch, { maxCanvasW: 4096 });
       this.layout = layout;
 
-      // 控制像素上限，过大则整体缩放绘制
       const maxPx = 4096;
       let drawScale = 1;
       if (layout.width > maxPx) drawScale = maxPx / layout.width;

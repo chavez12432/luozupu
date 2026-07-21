@@ -1,16 +1,22 @@
 <view class="auth-page">
   <view class="auth-card">
     <view class="auth-title">父亲姓名验证</view>
-    <view class="auth-desc">请输入父亲姓名（不用输入姓氏）</view>
+    <view class="auth-desc">
+      <text class="desc-line">请填写父亲在族谱中的全名</text>
+      <text class="desc-line">必须带「罗」姓，不可只填名字</text>
+      <text class="desc-line">正确示例：罗冬香</text>
+      <text class="desc-line desc-warn">错误示例：鼓声（缺少姓氏）</text>
+    </view>
 
-    <text class="auth-label">父亲名字</text>
+    <text class="auth-label">父亲全名</text>
     <input
       class="auth-input"
-      placeholder="请输入父亲名字"
+      placeholder="请输入如：罗冬香"
       value="{{fatherName}}"
       bindinput="onInput"
       maxlength="20"
     />
+    <view class="auth-hint">与谱中姓名完全一致，须以「罗」开头</view>
 
     <view wx:if="{{error}}" class="error-box">
       <text class="error-text">{{error}}</text>

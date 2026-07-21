@@ -30,10 +30,13 @@ function memberKey(m) {
  */
 function resolveRelation(viewer, target) {
   if (!viewer || !target) return RELATION.NONE;
-  if (viewer._id === target._id) return RELATION.SELF;
+  const vid = viewer._id != null ? String(viewer._id) : '';
+  const tid = target._id != null ? String(target._id) : '';
+  if (vid && tid && vid === tid) return RELATION.SELF;
 
   const vKey = memberKey(viewer);
   const tKey = memberKey(target);
+  if (vKey && tKey && vKey === tKey) return RELATION.SELF;
 
   // 子女：目标的父亲是自己
   if (vKey && oid(target.fatherId) === vKey) return RELATION.CHILD;
@@ -187,10 +190,15 @@ function pickEditable(patch) {
       const degree = String(e.degree || '').trim();
       const school = String(e.school || '').trim();
       if (!degree && !school) return null;
+      let year = null;
+      if (e.year != null && e.year !== '') {
+        const n = Number(e.year);
+        year = Number.isFinite(n) ? n : null;
+      }
       return {
         degree,
         school,
-        year: e.year != null && e.year !== '' ? Number(e.year) : null,
+        year,
         major: String(e.major || '').trim(),
         isDefault: !!e.isDefault
       };

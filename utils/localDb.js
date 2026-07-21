@@ -426,24 +426,33 @@ function findMemberByOriginalId(originalId) {
   return indexes.byOriginalId[String(originalId)] || null;
 }
 
+const { withClanSurname } = require('./clanName');
+
+/** 验证用全名：须以「罗」开头；未带姓返回 null；空串返回 '' */
+function normalizeFullName(input) {
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  if (!raw.startsWith('罗')) return null;
+  const full = withClanSurname(raw);
+  return full && full.length > 1 ? full : null;
+}
+
 function normalizePersonName(input) {
-  let name = String(input || '').trim();
-  if (name.startsWith('罗')) name = name.slice(1);
-  return name;
+  return withClanSurname(input);
 }
 
 function findMembersByName(name) {
-  const n = normalizePersonName(name);
+  const n = normalizeFullName(name);
   if (!n) return [];
-  return store.members.filter(m => normalizePersonName(m.name) === n);
+  return store.members.filter(m => withClanSurname(m.name) === n);
 }
 
 function getFatherDisplayName(member) {
   if (!member) return '';
-  if (member.fatherName) return normalizePersonName(member.fatherName);
+  if (member.fatherName) return withClanSurname(member.fatherName);
   if (member.fatherId === '' || member.fatherId == null) return '';
   const father = findMemberByOriginalId(member.fatherId);
-  return father ? normalizePersonName(father.name) : '';
+  return father ? withClanSurname(father.name) : '';
 }
 
 function hasFullLunarBirth(member) {
@@ -604,9 +613,19 @@ function getMemberDetail(id) {
     }));
   }
 
-  // 本村配偶：数字 originalId；W/S 开头为外村媳妇/女婿 ID，不当作族人 originalId
-  const clanSpouseKey = member.clanSpouseId
-    || (/^\d+$/.test(String(member.spouseId || '').trim()) ? member.spouseId : '');
+  // 本村配偶：clanSpouseId / linkedMemberId / 落在族人表的 spouseId（非 …W\d+ / …S\d+ 外姓妻婿 ID）
+  function resolveClanSpouseKey(m) {
+    if (m.clanSpouseId) return String(m.clanSpouseId).trim();
+    const infos = Array.isArray(m.spouseInfo) ? m.spouseInfo : [];
+    const linked = infos.find(s => s && (s.isSameVillage || s.linkedMemberId) && s.linkedMemberId);
+    if (linked && linked.linkedMemberId) return String(linked.linkedMemberId).trim();
+    const sid = String(m.spouseId || '').trim();
+    if (!sid) return '';
+    if (/[WS]\d+$/i.test(sid)) return ''; // 外姓妻/婿业务 ID
+    if (findMemberByOriginalId(sid)) return sid;
+    return '';
+  }
+  const clanSpouseKey = resolveClanSpouseKey(member);
   if (clanSpouseKey) {
     const clanSpouse = findMemberByOriginalId(clanSpouseKey);
     if (clanSpouse) {
@@ -746,6 +765,34 @@ function getMemberDetail(id) {
     detail.spouseInfo = [];
   }
 
+  // 女婿：仅女性族人；本村人可跳转族人详情
+  detail.sonsInLaw = [];
+  if (String(detail.gender || '') === '女') {
+    ensureWivesLoaded();
+    const wifeKey = detail.originalId != null && String(detail.originalId) !== ''
+      ? String(detail.originalId)
+      : String(detail.memberId || '');
+    const fromTable = (store.sons_in_law || []).filter(s => String(s.wifeId || '') === wifeKey);
+    const ids = Array.isArray(detail.sonInLawIds) ? detail.sonInLawIds : [];
+    const list = fromTable.length
+      ? fromTable
+      : ids.map(id => findById('sons_in_law', id) || { _id: id, name: '', wifeId: wifeKey });
+    detail.sonsInLaw = list.map(s => {
+      const linked = s.linkedMemberId || (s.isSameVillage ? (s.sonInLawId || s._id) : '');
+      const mem = linked
+        ? (findMemberByOriginalId(linked) || findById('members', linked))
+        : null;
+      return {
+        name: s.name || '',
+        _id: s._id || s.sonInLawId || '',
+        hometown: s.hometown || '',
+        isSameVillage: !!s.isSameVillage,
+        linkType: mem ? 'member' : '',
+        linkId: mem ? mem._id : ''
+      };
+    }).filter(s => s.name);
+  }
+
   const display = applyDetailDisplay(detail, { eras: dynastyEras });
   display.positionsStr = formatPositions(display.positions);
   display.educationStr = (display.educationList || formatEducationList(display.education) || [])
@@ -806,8 +853,6 @@ function getFamilyTree(params = {}) {
     fatherId: item.fatherId || '',
     fatherName: item.fatherName || '',
     gender: item.gender || '',
-    spouseName: item.spouseName || '',
-    spouseInfo: item.spouseInfo || [],
     hasBrokenLineage: !!item.hasBrokenLineage
   }));
 
@@ -956,6 +1001,7 @@ module.exports = {
   hasFullLunarBirth,
   matchLunarBirth,
   normalizePersonName,
+  normalizeFullName,
   filterCollection,
   countCollection,
   getMembers,

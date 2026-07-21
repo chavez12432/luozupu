@@ -1,12 +1,16 @@
 /* pages/family-tree/family-tree.wxss */
+/* 与荣誉堂等栏目一致：整页纵向 flex，底栏贴底不飘移 */
 .container {
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: #F7E8D0;
-  padding-bottom: 120rpx;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .header {
+  flex-shrink: 0;
   background: linear-gradient(165deg, #C41E1E 0%, #9B1515 100%);
   color: #fff;
   padding: 36rpx 30rpx 40rpx;
@@ -36,7 +40,11 @@
 }
 
 .hub-body {
+  flex: 1;
+  min-height: 0;
   padding: 28rpx;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .hall-grid {
@@ -89,6 +97,7 @@
 }
 
 .chart-header {
+  flex-shrink: 0;
   background: #5d4037;
   color: #fff;
   padding: 20rpx 24rpx 16rpx;
@@ -130,7 +139,9 @@
 }
 
 .chart-scroll {
-  height: calc(100vh - 280rpx);
+  flex: 1;
+  min-height: 0;
+  height: 0;
   background: #fffef9;
 }
 
@@ -145,44 +156,8 @@
 
 .loading,
 .chart-loading {
+  flex: 1;
   text-align: center;
   padding: 80rpx;
   color: #999;
-}
-
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #fff;
-  display: flex;
-  padding-bottom: env(safe-area-inset-bottom);
-  border-top: 1rpx solid #eee;
-  z-index: 20;
-}
-
-.nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 12rpx 0 8rpx;
-  color: #999;
-}
-
-.nav-item.active {
-  color: #8B4513;
-}
-
-.nav-icon {
-  font-size: 32rpx;
-  line-height: 1.2;
-  font-weight: 600;
-  margin-right: 0;
-}
-
-.nav-text {
-  font-size: 20rpx;
-  margin-top: 4rpx;
 }

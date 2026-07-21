@@ -177,26 +177,41 @@ exports.main = async (event, context) => {
     if (isPublic) {
       let dbWives = [];
       try {
-        const memberOriginalId = member.originalId || (member.memberId ? member.memberId.replace(/^M0+/, '') : '');
+        const memberOriginalId = member.originalId != null && String(member.originalId) !== ''
+          ? String(member.originalId)
+          : (member.memberId ? String(member.memberId) : '');
 
         if (memberOriginalId) {
-          const { data: wives } = await db.collection('wives')
-            .where({ husbandId: String(memberOriginalId) })
-            .orderBy('marriageOrder', 'asc')
-            .get();
+          // 不用 orderBy，避免缺复合索引导致整段查询失败；在内存中按 marriageOrder 排序
+          let wives = [];
+          try {
+            const res = await db.collection('wives')
+              .where({ husbandId: String(memberOriginalId) })
+              .get();
+            wives = res.data || [];
+          } catch (queryErr) {
+            console.log('查询 wives 表失败', queryErr);
+            wives = [];
+          }
 
-          dbWives = (wives || []).map(wife => ({
-            _id: wife._id,
-            name: wife.name,
-            maidenName: wife.maidenName,
-            hometown: wife.hometown || '',
-            marriageType: wife.marriageType,
-            marriageOrder: wife.marriageOrder,
-            burialPlace: wife.burialPlace,
-            remark: wife.remark,
-            birthDate: wife.birthDate,
-            deathDate: wife.deathDate
-          }));
+          dbWives = wives
+            .slice()
+            .sort((a, b) => (a.marriageOrder || 0) - (b.marriageOrder || 0))
+            .map(wife => ({
+              _id: wife._id,
+              wifeId: wife.wifeId || wife._id,
+              name: wife.name,
+              maidenName: wife.maidenName,
+              hometown: wife.hometown || '',
+              marriageType: wife.marriageType,
+              marriageOrder: wife.marriageOrder,
+              burialPlace: wife.burialPlace,
+              remark: wife.remark,
+              birthDate: wife.birthDate,
+              deathDate: wife.deathDate,
+              isSameVillage: !!wife.isSameVillage,
+              linkedMemberId: wife.linkedMemberId || ''
+            }));
         }
       } catch (e) {
         console.log('查询 wives 表失败', e);
@@ -204,17 +219,31 @@ exports.main = async (event, context) => {
 
       member.wives = mergeWivesWithRemark(dbWives, member);
 
-      // spouseId 指向族内成员（本村配偶，存 originalId）
-      if (spouseMemberId && String(spouseMemberId) !== String(fatherMemberId)) {
+      // 本村配偶：clanSpouseId / spouseInfo.linkedMemberId / 落在族人表的 spouseId
+      const linkedFromInfo = Array.isArray(member.spouseInfo)
+        ? (member.spouseInfo.find(s => s && s.isSameVillage && s.linkedMemberId) || {}).linkedMemberId
+        : '';
+      const clanKey = member.clanSpouseId
+        || linkedFromInfo
+        || (spouseMemberId && !/[WS]\d+$/i.test(String(spouseMemberId)) ? spouseMemberId : '');
+      if (clanKey && String(clanKey) !== String(fatherMemberId)) {
         try {
-          const { data: spouses } = await db.collection('members')
-            .where({
-              originalId: Number(spouseMemberId) || spouseMemberId
-            })
+          let spouseDoc = null;
+          const { data: byOrig } = await db.collection('members')
+            .where({ originalId: Number(clanKey) || String(clanKey) })
             .limit(1)
             .get();
-          if (spouses && spouses[0]) {
-            const spouse = spouses[0];
+          if (byOrig && byOrig[0]) {
+            spouseDoc = byOrig[0];
+          } else {
+            const { data: byMid } = await db.collection('members')
+              .where({ memberId: String(clanKey) })
+              .limit(1)
+              .get();
+            if (byMid && byMid[0]) spouseDoc = byMid[0];
+          }
+          if (spouseDoc) {
+            const spouse = spouseDoc;
             member.spouseName = spouse.name;
             member.spouseMemberDocId = spouse._id;
             const clanEntry = {
@@ -341,18 +370,84 @@ exports.main = async (event, context) => {
       : '';
     // 保留库中的 spouseId（族内 originalId）；展示用 spouseMemberDocId
     
-    // 配偶/丈夫：仅保留可跳转记录（本村 memberDocId 或 wives 表 _id）
-    member.wives = (member.wives || []).filter(w =>
-      w && w.name && (w.memberDocId || w._id)
-    );
-    member.husbands = (member.husbands || []).filter(h =>
-      h && h.name && (h.memberDocId || h._id)
-    );
-    if (!member.wives.length && !member.spouseMemberDocId) {
+    // 配偶/丈夫：仅保留可跳转记录，并补全详情页所需的 linkType / linkId
+    member.wives = (member.wives || [])
+      .filter(w => w && w.name && (w.memberDocId || w._id))
+      .map(w => Object.assign({}, w, {
+        linkType: w.memberDocId ? 'member' : 'wife',
+        linkId: w.memberDocId || w._id
+      }));
+    member.husbands = (member.husbands || [])
+      .filter(h => h && h.name && (h.memberDocId || h._id))
+      .map(h => {
+        const mid = h.memberDocId || h._id;
+        return Object.assign({}, h, {
+          memberDocId: mid,
+          linkType: 'member',
+          linkId: mid
+        });
+      });
+    if (member.wives.length && member.gender !== '女') {
+      member.spouseName = member.wives[0].name;
+      member.spouseInfo = member.wives.map(w => ({
+        name: w.name,
+        type: w.marriageType,
+        hometown: w.hometown || '',
+        memberDocId: w.memberDocId || '',
+        wifeId: w.memberDocId ? '' : (w._id || ''),
+        linkType: w.linkType,
+        linkId: w.linkId
+      }));
+    } else if (!member.wives.length && !member.spouseMemberDocId) {
       member.spouseName = '';
       member.spouseInfo = [];
     }
     member.children = (member.children || []).filter(c => c && c._id);
+
+    // 女婿：本族女性
+    member.sonsInLaw = [];
+    if (String(member.gender || '') === '女') {
+      try {
+        const wifeKey = member.originalId != null && String(member.originalId) !== ''
+          ? String(member.originalId)
+          : String(member.memberId || '');
+        const { data: silRows } = await db.collection('sons_in_law')
+          .where({ wifeId: wifeKey })
+          .get();
+        const rows = silRows || [];
+        for (const s of rows) {
+          let linkId = '';
+          const linked = s.linkedMemberId || (s.isSameVillage ? (s.sonInLawId || s._id) : '');
+          if (linked) {
+            const { data: byOrig } = await db.collection('members')
+              .where({ originalId: Number(linked) || String(linked) })
+              .limit(1)
+              .get();
+            if (byOrig && byOrig[0]) {
+              linkId = byOrig[0]._id;
+            } else {
+              const { data: byMid } = await db.collection('members')
+                .where({ memberId: String(linked) })
+                .limit(1)
+                .get();
+              if (byMid && byMid[0]) linkId = byMid[0]._id;
+            }
+          }
+          if (s.name) {
+            member.sonsInLaw.push({
+              name: s.name,
+              _id: s._id,
+              hometown: s.hometown || '',
+              isSameVillage: !!s.isSameVillage,
+              linkType: linkId ? 'member' : '',
+              linkId
+            });
+          }
+        }
+      } catch (e) {
+        console.log('查询女婿失败', e);
+      }
+    }
     
     // 添加分堂代码
     const branchCodeMap = {
@@ -397,9 +492,18 @@ exports.main = async (event, context) => {
       delete detail.avatar;
       delete detail.photo;
       delete detail.photoGallery;
+      delete detail.photoGalleryList;
       delete detail.wives;
       delete detail.husbands;
       delete detail.children;
+      delete detail.sonsInLaw;
+      delete detail.gongming;
+      delete detail.guanzhi;
+      delete detail.birthDynasty;
+      delete detail.birthGanzhi;
+      delete detail.birthZodiac;
+      delete detail.deathDynasty;
+      delete detail.deathGanzhi;
     }
     
     return {

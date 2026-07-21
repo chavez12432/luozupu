@@ -1,7 +1,7 @@
 <view class="auth-page">
   <view class="auth-card">
     <view class="auth-title">农历生日验证</view>
-    <view class="auth-desc">请选择您的农历出生日期</view>
+    <view class="auth-desc">请选择您的农历出生日期，请注意本软件库是以第七版家谱为基础制作的，现有人员的生日也来自于第七版家谱，且都视作农历。你可以在登录成功后去修改自己的生日。</view>
 
     <view wx:if="{{matchCount > 1}}" class="candidate-tip">
       找到多个同名人员，请选择出生年份进一步确认

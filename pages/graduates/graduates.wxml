@@ -62,8 +62,7 @@
             wx:key="eduIdx"
             class="edu-line"
           >
-            <text class="edu-degree">{{edu.degree}}</text>
-            <text class="edu-school">{{edu.school}}</text>
+            <text class="edu-display">{{edu.display}}</text>
           </view>
         </view>
       </view>

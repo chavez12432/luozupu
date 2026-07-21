@@ -31,19 +31,80 @@ function matchAny(text, keywords) {
   return keywords.some(k => s.includes(k));
 }
 
+function splitMultiValues(val) {
+  if (val == null || val === '') return [];
+  if (Array.isArray(val)) {
+    return val.map(v => String(v).trim()).filter(Boolean);
+  }
+  return String(val)
+    .split(/[,，;；、|/]+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
 function normalizeEdu(edu) {
   if (typeof edu === 'string') {
-    return { degree: edu, school: '', major: '', year: null };
+    const line = edu.trim();
+    return { degree: line, school: '', major: '', year: null, display: line };
   }
   if (!edu || typeof edu !== 'object') {
-    return { degree: '', school: '', major: '', year: null };
+    return { degree: '', school: '', major: '', year: null, display: '' };
   }
-  return {
-    degree: edu.degree || '',
-    school: edu.school || '',
-    major: edu.major || '',
-    year: edu.year != null && edu.year !== '' ? Number(edu.year) : null
-  };
+  const degree = edu.degree != null ? String(edu.degree).trim() : '';
+  const school = edu.school != null ? String(edu.school).trim() : '';
+  const major = edu.major != null ? String(edu.major).trim() : '';
+  let year = edu.year;
+  if (year != null && year !== '') {
+    const n = Number(String(year).replace(/年.*/, ''));
+    year = Number.isFinite(n) && n > 0 ? n : year;
+  } else {
+    year = null;
+  }
+  const display = [degree, school, year].filter(v => v != null && String(v).trim() !== '').join(' ');
+  return { degree, school, major, year, display };
+}
+
+/** 与个人详情 educationList 一致：拆分 degree/school/year 三字段 */
+function expandStructuredEducation(education) {
+  const out = [];
+  (education || []).forEach(e => {
+    if (!e) return;
+    if (typeof e === 'string') {
+      const n = normalizeEdu(e);
+      if (n.display) out.push(n);
+      return;
+    }
+    const degrees = splitMultiValues(e.degree);
+    const schools = splitMultiValues(e.school);
+    const yearsRaw = splitMultiValues(e.year);
+    const years = yearsRaw.map(y => {
+      const n = Number(String(y).replace(/年.*/, ''));
+      return Number.isFinite(n) && n > 0 ? n : y;
+    });
+    const n = Math.max(degrees.length, schools.length, years.length, 1);
+    if (!degrees.length && !schools.length && !years.length && !(e.degree || e.school || e.year)) {
+      return;
+    }
+    for (let i = 0; i < n; i++) {
+      const degree = degrees[i] || (n === 1 ? (e.degree || '') : '') || '';
+      const school = schools[i] || (schools.length === 1 ? schools[0] : '') || (n === 1 ? (e.school || '') : '') || '';
+      let year = years[i] != null ? years[i] : (years.length === 1 ? years[0] : null);
+      if (year == null && n === 1 && e.year != null && e.year !== '') year = e.year;
+      const item = normalizeEdu({ degree, school, year, major: e.major || '' });
+      if (!item.display) continue;
+      out.push(item);
+    }
+  });
+  return out;
+}
+
+/** 归类用：无学位但校名含大学/学院时，按「大学」归入专科及以上 */
+function degreeForClassify(edu) {
+  const d = (edu && edu.degree) || '';
+  if (d) return d;
+  const school = (edu && edu.school) || '';
+  if (/大学|学院|师大|党校|地质大学/.test(school)) return '大学';
+  return '';
 }
 
 function getBirthYear(member) {
@@ -211,40 +272,33 @@ function extractImperialFromRemark(remark) {
   return found.map(degree => ({ degree, school: '', major: '', year: null }));
 }
 
-/** 合并结构化学历 + 备注解析 */
+/** 合并结构化学历 + 备注解析；有 education 三字段时以个人资料为准，不与备注打架 */
 function getEffectiveEducations(member) {
+  const structured = expandStructuredEducation(member && member.education);
+  if (structured.length) {
+    return structured;
+  }
+
   const list = [];
   const seen = new Set();
-
   const add = (edu) => {
     const n = normalizeEdu(edu);
-    if (!n.degree) return;
+    if (!n.display) return;
     const key = `${n.degree}|${n.school}|${n.year || ''}`;
     if (seen.has(key)) return;
     seen.add(key);
     list.push(n);
   };
 
-  if (Array.isArray(member.education)) {
-    member.education.forEach(add);
+  const gm = String((member && member.gongming) || '').trim();
+  if (gm) {
+    gm.split(/[、,，;；/|]/).map(s => s.trim()).filter(Boolean).forEach(degree => add({ degree }));
   }
 
-  const fromRemark = extractEducationFromRemark(member.remark || '');
-  // 结构化已有专科及以上时，备注仅作补充学校名为空的项
-  const hasCollege = list.some(e => matchAny(e.degree, COLLEGE_PLUS));
-  for (const edu of fromRemark) {
-    if (!hasCollege) {
-      add(edu);
-    } else if (edu.school) {
-      // 补学校：同学历无校名时
-      const same = list.find(e => e.degree === edu.degree && !e.school);
-      if (same) same.school = edu.school;
-      else add(edu);
-    }
-  }
+  extractEducationFromRemark((member && member.remark) || '').forEach(add);
 
   if (isImperialEra(member)) {
-    extractImperialFromRemark(member.remark || '').forEach(add);
+    extractImperialFromRemark((member && member.remark) || '').forEach(add);
   }
 
   return list;
@@ -254,8 +308,9 @@ function getEffectiveEducations(member) {
  * 判定单条学历归属时段：imperial | republican | modern | null
  */
 function classifyEduBucket(member, edu) {
-  const { degree, year } = edu;
-  if (!degree) return null;
+  const degree = degreeForClassify(edu);
+  const year = edu && edu.year;
+  if (!degree && !(edu && edu.school)) return null;
 
   if (isImperialEra(member) && matchAny(degree, IMPERIAL_DEGREES)) {
     return 'imperial';
@@ -265,29 +320,29 @@ function classifyEduBucket(member, edu) {
 
   const birthYear = getBirthYear(member);
 
-  // 第二类：出生 1912–1978（如阳先），优先按人员年代
   if (birthYear != null && birthYear >= 1912 && birthYear < MODERN_BIRTH_FROM) {
-    return matchAny(degree, SCHOOL_LEVEL_DEGREES) ? 'republican' : null;
+    return matchAny(degree, SCHOOL_LEVEL_DEGREES) || edu.school
+      ? 'republican'
+      : null;
   }
 
-  // 1997 年后考大学一代：出生 ≥ 1979，专科及以上 → 第三类
   if (birthYear != null && birthYear >= MODERN_BIRTH_FROM) {
     return matchAny(degree, COLLEGE_PLUS) ? 'modern' : null;
   }
 
-  // 无出生年时：按学历年份
-  if (year != null && !Number.isNaN(year)) {
-    if (year >= 1997) {
+  if (year != null && !Number.isNaN(Number(year))) {
+    const y = Number(year);
+    if (y >= 1997) {
       return matchAny(degree, COLLEGE_PLUS) ? 'modern' : null;
     }
-    if (year >= 1912 && year < 1997) {
-      return matchAny(degree, SCHOOL_LEVEL_DEGREES) ? 'republican' : null;
+    if (y >= 1912 && y < 1997) {
+      return matchAny(degree, SCHOOL_LEVEL_DEGREES) || edu.school ? 'republican' : null;
     }
   }
 
   const dynasty = getDynasty(member);
   if (dynasty.includes('民国') || dynasty.includes('中华人民共和国') || dynasty.includes('共和国')) {
-    if (matchAny(degree, COLLEGE_PLUS) || matchAny(degree, SCHOOL_LEVEL_DEGREES)) {
+    if (matchAny(degree, COLLEGE_PLUS) || matchAny(degree, SCHOOL_LEVEL_DEGREES) || edu.school) {
       return 'republican';
     }
   }
@@ -298,16 +353,30 @@ function classifyEduBucket(member, edu) {
 function classifyMemberEducations(member) {
   const result = { imperial: null, republican: null, modern: null };
   const educations = getEffectiveEducations(member || {});
-  if (!educations.length) return result;
-
   const birthText = formatBirthText(member);
   const dynastyEra = formatDynastyEra(member);
   const base = {
     _id: member._id != null ? String(member._id) : '',
+    originalId: member.originalId || member.memberId || '',
     name: member.name || '',
     birthText,
-    dynastyEra
+    dynastyEra,
+    gongming: member.gongming || '',
+    guanzhi: member.guanzhi || (
+      Array.isArray(member.positions) && member.positions.length
+        ? member.positions.map(p => (typeof p === 'string' ? p : (p.title || ''))).filter(Boolean).join('；')
+        : ''
+    ),
+    educationRaw: educations
   };
+
+  if (!educations.length) {
+    if (isImperialEra(member) && (base.gongming || base.guanzhi)) {
+      const t = base.gongming || base.guanzhi;
+      result.imperial = { ...base, titles: [t], titleText: t };
+    }
+    return result;
+  }
 
   const titles = [];
   const republicanEdus = [];
@@ -315,25 +384,37 @@ function classifyMemberEducations(member) {
 
   for (const edu of educations) {
     const bucket = classifyEduBucket(member, edu);
+    const display = edu.display || [edu.degree, edu.school, edu.year].filter(v => v != null && String(v).trim() !== '').join(' ');
     if (bucket === 'imperial') {
       if (edu.degree && !titles.includes(edu.degree)) titles.push(edu.degree);
+      else if (!edu.degree && display && !titles.includes(display)) titles.push(display);
     } else if (bucket === 'republican') {
       republicanEdus.push({
-        school: edu.school || '—',
-        degree: edu.degree,
-        year: edu.year
+        school: edu.school || '',
+        degree: edu.degree || '',
+        year: edu.year,
+        display
       });
     } else if (bucket === 'modern') {
       modernEdus.push({
-        school: edu.school || '—',
-        degree: edu.degree,
-        year: edu.year
+        school: edu.school || '',
+        degree: edu.degree || '',
+        year: edu.year,
+        display
       });
     }
   }
 
   if (titles.length) {
     result.imperial = { ...base, titles, titleText: titles.join('、') };
+  } else if (isImperialEra(member) && (member.gongming || member.guanzhi)) {
+    // 仅有功名/官职字段、未结构化成 education 时也收录
+    const t = member.gongming || member.guanzhi;
+    result.imperial = {
+      ...base,
+      titles: [t],
+      titleText: t
+    };
   }
   if (republicanEdus.length) {
     result.republican = { ...base, educations: republicanEdus };
@@ -378,6 +459,7 @@ module.exports = {
   SCHOOL_LEVEL_DEGREES,
   COLLEGE_PLUS,
   normalizeEdu,
+  expandStructuredEducation,
   formatBirthText,
   formatDynastyEra,
   extractEducationFromRemark,

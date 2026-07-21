@@ -121,11 +121,22 @@ function localVerifyName({ name }) {
   if (readLocalAccount()) {
     return { success: false, message: '该微信已绑定族谱账号', code: 'ALREADY_BOUND' };
   }
-  const matches = localDb.findMembersByName(name);
+  const full = localDb.normalizeFullName(name);
+  if (full === '') {
+    return { success: false, message: '请输入姓名' };
+  }
+  if (full == null) {
+    return {
+      success: false,
+      message: '请输入含「罗」姓的全名，例如：罗青兰',
+      code: 'NEED_FULL_NAME'
+    };
+  }
+  const matches = localDb.findMembersByName(full);
   if (!matches.length) {
     return {
       success: false,
-      message: '未找到您的族谱信息。请确认姓名是否正确。',
+      message: '未找到您的族谱信息。请确认全名是否正确（须含「罗」姓）。',
       code: 'NOT_FOUND',
       canAppeal: true
     };
@@ -194,8 +205,15 @@ function localVerifyFather({ ticketId, fatherName }) {
     return { success: false, message: '请先完成出生日期验证' };
   }
 
-  const fname = localDb.normalizePersonName(fatherName);
-  if (!fname) return { success: false, message: '请输入父亲姓名' };
+  const fname = localDb.normalizeFullName(fatherName);
+  if (fname === '') return { success: false, message: '请输入父亲姓名' };
+  if (fname == null) {
+    return {
+      success: false,
+      message: '请输入父亲含「罗」姓的全名，例如：罗鼓声',
+      code: 'NEED_FULL_NAME'
+    };
+  }
 
   const members = (ticket.candidatePersonIds || [])
     .map(id => localDb.findById('members', id))
@@ -411,7 +429,6 @@ function getCachedAccount() {
 
 async function bootstrap() {
   if (config.isLocalMode()) {
-    // dataService.bootstrap 已 init localDb
     try {
       localDb.init();
     } catch (e) { /* already inited */ }
@@ -420,18 +437,73 @@ async function bootstrap() {
     return { verified: !!account, account };
   }
 
-  try {
+  const trySession = async () => {
     const res = await getSession();
     if (res.success && res.verified && res.account) {
       writeLocalAccount(res.account);
       return { verified: true, account: res.account };
     }
-  } catch (err) {
-    console.warn('[authService] getSession failed', err);
-  }
+    if (res.success && !res.verified) {
+      // 云端明确无绑定：清本机
+      clearLocalAccount();
+      clearTicket();
+      if (res.staleBinding) {
+        return { verified: false, account: null, staleBinding: true, message: res.message };
+      }
+      return { verified: false, account: null };
+    }
+    throw new Error((res && res.message) || 'getSession 失败');
+  };
 
-  clearLocalAccount();
-  return { verified: false, account: null };
+  try {
+    return await trySession();
+  } catch (err) {
+    console.warn('[authService] getSession failed, retry once', err);
+    try {
+      await new Promise(r => setTimeout(r, 400));
+      return await trySession();
+    } catch (err2) {
+      console.warn('[authService] getSession retry failed', err2);
+      // 瞬时网络错误：保留本机缓存，避免误踢已登录用户
+      const cached = readLocalAccount();
+      if (cached) {
+        writeLocalAccount(cached);
+        return { verified: true, account: cached, offline: true };
+      }
+      return { verified: false, account: null };
+    }
+  }
+}
+
+/** 等待 App 启动时的认证会话恢复完成 */
+function waitAuthReady() {
+  try {
+    const app = getApp();
+    if (app && app.globalData && app.globalData.authReadyPromise) {
+      return app.globalData.authReadyPromise;
+    }
+  } catch (e) { /* ignore */ }
+  return Promise.resolve({ verified: isVerified() });
+}
+
+/**
+ * 若云端已绑定，拉会话写入本机并返回账号；否则 null
+ */
+async function restoreBoundSession() {
+  if (config.isLocalMode()) {
+    const account = readLocalAccount();
+    return account || null;
+  }
+  try {
+    const res = await getSession();
+    if (res.success && res.verified && res.account) {
+      writeLocalAccount(res.account);
+      return res.account;
+    }
+  } catch (e) {
+    console.warn('[authService] restoreBoundSession', e);
+  }
+  return null;
 }
 
 function logoutLocal() {
@@ -439,8 +511,28 @@ function logoutLocal() {
   clearTicket();
 }
 
+/** 清除云端绑定 + 本机缓存，便于重新验证关联 */
+async function resetMyBinding() {
+  if (config.isLocalMode()) {
+    logoutLocal();
+    return { success: true, message: '已清除本机认证状态' };
+  }
+  try {
+    const res = await callCloud('resetMyBinding');
+    logoutLocal();
+    return res && res.success
+      ? res
+      : { success: false, message: (res && res.message) || '清除失败' };
+  } catch (err) {
+    logoutLocal();
+    return { success: false, message: err.message || '清除失败' };
+  }
+}
+
 module.exports = {
   bootstrap,
+  waitAuthReady,
+  restoreBoundSession,
   getSession,
   verifyName,
   verifyBirthday,
@@ -453,5 +545,6 @@ module.exports = {
   getCachedAccount,
   maskPhone,
   logoutLocal,
+  resetMyBinding,
   ACCOUNT_KEY
 };

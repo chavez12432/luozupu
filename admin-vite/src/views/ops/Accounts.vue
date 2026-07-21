@@ -12,7 +12,7 @@
         type="info"
         :closable="false"
         show-icon
-        title="说明：此处为完成身份验证并绑定手机号的账号记录，不是每次打开小程序的流水日志。"
+        title="说明：此处为完成身份验证并绑定手机号的账号记录。强制解绑后，对方需重新验证；该手机号/微信号可被真正本人重新绑定。"
         style="margin-bottom: 16px;"
       />
 
@@ -38,8 +38,8 @@
           </template>
         </el-table-column>
         <el-table-column prop="wechatId" label="微信号" width="140" show-overflow-tooltip />
-        <el-table-column prop="createTime" label="绑定时间" min-width="180" />
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column prop="createTime" label="绑定时间" min-width="160" />
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button
               v-if="row.personId"
@@ -47,6 +47,12 @@
               link
               @click="goMember(row.personId)"
             >查看族人</el-button>
+            <el-button
+              type="danger"
+              link
+              :loading="unbindingId === row._id"
+              @click="confirmUnbind(row)"
+            >强制解绑</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -68,7 +74,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { opsApi, initCloud } from '../../api/cloudApi.js'
 
 const router = useRouter()
@@ -78,6 +84,7 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = 20
 const keyword = ref('')
+const unbindingId = ref('')
 
 async function loadData(p = 1) {
   page.value = p
@@ -111,6 +118,39 @@ function resetSearch() {
 
 function goMember(personId) {
   router.push(`/members/edit/${personId}`)
+}
+
+async function confirmUnbind(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确定强制解绑「${row.name || '该用户'}」吗？\n将删除登录账号，并清空该族人资料上的手机号、微信号绑定。对方需重新验证才能登录。`,
+      '强制解绑',
+      {
+        type: 'warning',
+        confirmButtonText: '确认解绑',
+        cancelButtonText: '取消',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+  } catch {
+    return
+  }
+
+  unbindingId.value = row._id
+  try {
+    await initCloud()
+    const res = await opsApi.forceUnbindAccount(row._id)
+    if (!res.success) {
+      ElMessage.error(res.message || '解绑失败')
+      return
+    }
+    ElMessage.success(res.message || '已解绑')
+    await loadData(page.value)
+  } catch (e) {
+    ElMessage.error(e.message || '解绑失败')
+  } finally {
+    unbindingId.value = ''
+  }
 }
 
 onMounted(() => loadData(1))

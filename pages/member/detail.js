@@ -47,7 +47,7 @@ Page({
 
       if (res.result && res.result.success) {
         this.setData({
-          member: res.result.data,
+          member: this.normalizeSpouseLinks(res.result.data),
           loading: false
         });
         this.loadPermission(id);
@@ -60,6 +60,37 @@ Page({
       wx.showToast({ title: '加载失败', icon: 'none' });
       this.setData({ loading: false });
     }
+  },
+
+  /** 兼容旧版云函数：补全配偶跳转所需的 linkType / linkId */
+  normalizeSpouseLinks(member) {
+    if (!member) return member;
+    const wives = Array.isArray(member.wives) ? member.wives : [];
+    member.wives = wives
+      .filter(w => w && w.name && (w.memberDocId || w._id || (w.linkType && w.linkId)))
+      .map(w => {
+        if (w.linkType && w.linkId) return w;
+        if (w.memberDocId) {
+          return Object.assign({}, w, { linkType: 'member', linkId: w.memberDocId });
+        }
+        if (w._id) {
+          return Object.assign({}, w, { linkType: 'wife', linkId: w._id });
+        }
+        return w;
+      });
+    const husbands = Array.isArray(member.husbands) ? member.husbands : [];
+    member.husbands = husbands
+      .filter(h => h && h.name && (h.memberDocId || h._id || h.linkId))
+      .map(h => {
+        if (h.linkType && h.linkId) return h;
+        const mid = h.memberDocId || h._id || h.linkId;
+        return Object.assign({}, h, {
+          memberDocId: mid,
+          linkType: 'member',
+          linkId: mid
+        });
+      });
+    return member;
   },
 
   async loadPermission(id) {
@@ -168,6 +199,60 @@ Page({
 
   submitClue() {
     wx.showToast({ title: '功能开发中', icon: 'none' });
+  },
+
+  onCallPhone(e) {
+    const phone = (e.currentTarget.dataset.phone || '').trim();
+    if (!phone) return;
+    wx.makePhoneCall({ phoneNumber: phone });
+  },
+
+  onCopyWechat(e) {
+    const wechat = (e.currentTarget.dataset.wechat || '').trim();
+    if (!wechat) return;
+    wx.setClipboardData({
+      data: wechat,
+      success: () => wx.showToast({ title: '已复制微信号', icon: 'success' })
+    });
+  },
+
+  onBindContact(e) {
+    if (!this.data.permission.canEdit) {
+      wx.showToast({ title: '无权修改', icon: 'none' });
+      return;
+    }
+    wx.navigateTo({ url: `/pages/member/edit?id=${this.memberId}` });
+  },
+
+  onOpenBurialGps() {
+    const raw = String((this.data.member && this.data.member.burialGps) || '').trim();
+    if (!raw) return;
+    const m = raw.match(/(-?\d+\.?\d*)\s*[,，\s]\s*(-?\d+\.?\d*)/);
+    if (m) {
+      const lat = Number(m[1]);
+      const lng = Number(m[2]);
+      wx.openLocation({
+        latitude: lat,
+        longitude: lng,
+        name: (this.data.member && this.data.member.burialPlace) || '墓葬地',
+        scale: 16
+      });
+      return;
+    }
+    wx.setClipboardData({
+      data: raw,
+      success: () => wx.showToast({ title: '已复制定位信息', icon: 'success' })
+    });
+  },
+
+  onPreviewGallery(e) {
+    const list = (this.data.member && this.data.member.photoGalleryList) || [];
+    if (!list.length) return;
+    const index = Number(e.currentTarget.dataset.index) || 0;
+    wx.previewImage({
+      current: list[index],
+      urls: list
+    });
   },
 
   choosePhoto() {

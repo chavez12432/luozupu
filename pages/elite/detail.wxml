@@ -24,5 +24,9 @@
       <view class="nav-icon">←</view>
       <text class="nav-text">返回名单</text>
     </view>
+    <view class="nav-item" wx:if="{{hero.hasLink}}" bindtap="viewMember">
+      <view class="nav-icon">👤</view>
+      <text class="nav-text">族谱档案</text>
+    </view>
   </view>
 </view>

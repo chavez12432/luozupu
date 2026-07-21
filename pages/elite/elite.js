@@ -1,8 +1,5 @@
 // pages/elite/elite.js
-const { ELITE_HEROES } = require('../../utils/eliteHeroes');
 const authGuard = require('../../utils/authGuard');
-
-const RESET_FLAG = 'eliteHeroesResetV1';
 
 Page({
   data: {
@@ -22,10 +19,15 @@ Page({
   async loadData() {
     this.setData({ loading: true });
     try {
-      await this.clearLegacyEliteOnce();
+      const res = await wx.cloud.callFunction({
+        name: 'adminApi',
+        data: { action: 'listElite', page: 1, pageSize: 100 }
+      });
+      const list = (res.result && res.result.success && res.result.data) || [];
       this.setData({
-        elite: ELITE_HEROES.map(item => ({
-          id: item.id,
+        elite: list.map(item => ({
+          id: item._id,
+          heroId: item.heroId || '',
           name: item.name,
           branch: item.branch,
           generation: item.generation
@@ -33,38 +35,17 @@ Page({
       });
     } catch (err) {
       console.error('加载失败', err);
-      this.setData({
-        elite: ELITE_HEROES.map(item => ({
-          id: item.id,
-          name: item.name,
-          branch: item.branch,
-          generation: item.generation
-        }))
-      });
+      wx.showToast({ title: '加载失败', icon: 'none' });
+      this.setData({ elite: [] });
     } finally {
       this.setData({ loading: false });
-    }
-  },
-
-  async clearLegacyEliteOnce() {
-    if (wx.getStorageSync(RESET_FLAG)) return;
-    try {
-      const res = await wx.cloud.callFunction({
-        name: 'adminApi',
-        data: { action: 'resetEliteHeroes' }
-      });
-      if (res.result && res.result.success) {
-        wx.setStorageSync(RESET_FLAG, 1);
-      }
-    } catch (err) {
-      console.warn('清空群英榜关联失败（可忽略）', err);
     }
   },
 
   viewHero(e) {
     const id = e.currentTarget.dataset.id;
     if (!id) return;
-    wx.navigateTo({ url: `/pages/elite/detail?id=${id}` });
+    wx.navigateTo({ url: `/pages/elite/detail?id=${encodeURIComponent(id)}` });
   },
 
   goBack() {

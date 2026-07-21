@@ -221,6 +221,221 @@ app.get('/members/export-all', async (req, res) => {
   }
 });
 
+/** 荣誉榜直连云库（不依赖云函数部署，避免 add/update 带脏字段失败） */
+const HONOR_COLLECTIONS = new Set(['patriarchs', 'sages', 'elite']);
+
+function cleanHonorPayload(data) {
+  const skip = new Set([
+    '_id', '_openid', 'createdAt', 'updatedAt',
+    'hasLink', 'paragraphs', 'titles', 'titleText', 'educations', 'birthText', 'dynastyEra'
+  ]);
+  const out = {};
+  for (const [k, v] of Object.entries(data || {})) {
+    if (skip.has(k)) continue;
+    if (v === undefined) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+function isCollectionMissingError(err) {
+  const msg = String((err && (err.message || err.errMsg || err)) || '');
+  const code = err && (err.code || err.errCode);
+  return (
+    code === -502005 ||
+    code === 'DATABASE_COLLECTION_NOT_EXIST' ||
+    /collection not exists|Db or Table not exist|DATABASE_COLLECTION_NOT_EXIST|-502005/i.test(msg)
+  );
+}
+
+async function ensureHonorCollection(name) {
+  const db = getDb();
+  try {
+    if (typeof db.createCollection === 'function') {
+      await db.createCollection(name);
+      console.log('[honor] 已创建集合:', name);
+      return;
+    }
+  } catch (e) {
+    if (!isCollectionMissingError(e)) {
+      console.log('[honor] createCollection', name, e.message || e);
+    }
+  }
+  // 无 createCollection 时：写一条再删，触发建表
+  try {
+    const addRes = await db.collection(name).add({
+      _honorBootstrap: true,
+      createdAt: new Date().toISOString()
+    });
+    const id = addRes && (addRes.id || addRes._id);
+    if (id) {
+      try { await db.collection(name).doc(id).remove(); } catch (_) { /* ignore */ }
+    }
+    console.log('[honor] 通过写入引导创建集合:', name);
+  } catch (e2) {
+    console.error('[honor] 无法创建集合', name, e2.message || e2);
+    throw e2;
+  }
+}
+
+app.post('/honor/:collection/list', async (req, res) => {
+  try {
+    const { collection } = req.params;
+    if (!HONOR_COLLECTIONS.has(collection)) {
+      return res.status(400).json({ success: false, message: '非法集合' });
+    }
+    const page = Math.max(1, Number(req.body.page) || 1);
+    const pageSize = Math.min(200, Math.max(1, Number(req.body.pageSize) || 100));
+    const db = getDb();
+    const where = {};
+    if (collection === 'sages' && req.body.dynasty) where.dynasty = req.body.dynasty;
+    if (collection === 'elite' && req.body.achievementType) where.achievementType = req.body.achievementType;
+    if (collection === 'patriarchs' && req.body.branch) where.branch = req.body.branch;
+
+    let total = 0;
+    let data = [];
+    try {
+      let query = db.collection(collection);
+      if (Object.keys(where).length) query = query.where(where);
+      const countRes = await query.count();
+      total = countRes.total || 0;
+      try {
+        const orderField = collection === 'patriarchs' || collection === 'elite' ? 'sortOrder' : 'generation';
+        const got = await query.orderBy(orderField, 'asc').skip((page - 1) * pageSize).limit(pageSize).get();
+        data = got.data || [];
+      } catch (e) {
+        const got = await query.skip((page - 1) * pageSize).limit(pageSize).get();
+        data = got.data || [];
+      }
+    } catch (error) {
+      if (isCollectionMissingError(error)) {
+        await ensureHonorCollection(collection);
+        total = 0;
+        data = [];
+      } else {
+        throw error;
+      }
+    }
+    res.json({ success: true, data, total, page, pageSize });
+  } catch (error) {
+    console.error('honor list 失败:', error);
+    res.status(500).json({ success: false, message: error.message || String(error) });
+  }
+});
+
+app.post('/honor/:collection/get', async (req, res) => {
+  try {
+    const { collection } = req.params;
+    const _id = req.body && req.body._id;
+    if (!HONOR_COLLECTIONS.has(collection) || !_id) {
+      return res.status(400).json({ success: false, message: '参数错误' });
+    }
+    try {
+      const got = await getDb().collection(collection).doc(_id).get();
+      const item = unwrapDoc(got);
+      if (!item) return res.status(404).json({ success: false, message: '未找到记录' });
+      return res.json({ success: true, data: item });
+    } catch (error) {
+      if (isCollectionMissingError(error)) {
+        await ensureHonorCollection(collection);
+        return res.status(404).json({ success: false, message: '未找到记录（集合已新建，请先重置/导入数据）' });
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('honor get 失败:', error);
+    res.status(500).json({ success: false, message: error.message || String(error) });
+  }
+});
+
+app.post('/honor/:collection/create', async (req, res) => {
+  try {
+    const { collection } = req.params;
+    if (!HONOR_COLLECTIONS.has(collection)) {
+      return res.status(400).json({ success: false, message: '非法集合' });
+    }
+    const payload = cleanHonorPayload(req.body || {});
+    if (!payload.name) return res.status(400).json({ success: false, message: '姓名不能为空' });
+    const now = new Date().toISOString();
+    payload.createdAt = now;
+    payload.updatedAt = now;
+    let result;
+    try {
+      result = await getDb().collection(collection).add(payload);
+    } catch (error) {
+      if (isCollectionMissingError(error)) {
+        await ensureHonorCollection(collection);
+        result = await getDb().collection(collection).add(payload);
+      } else {
+        throw error;
+      }
+    }
+    const _id = result.id || result._id;
+    res.json({ success: true, data: { _id }, message: '创建成功' });
+  } catch (error) {
+    console.error('honor create 失败:', error);
+    res.status(500).json({ success: false, message: error.message || String(error) });
+  }
+});
+
+app.post('/honor/:collection/update', async (req, res) => {
+  try {
+    const { collection } = req.params;
+    const body = req.body || {};
+    const _id = body._id;
+    if (!HONOR_COLLECTIONS.has(collection) || !_id) {
+      return res.status(400).json({ success: false, message: '参数错误' });
+    }
+    const payload = cleanHonorPayload(body);
+    payload.updatedAt = new Date().toISOString();
+    if (Object.prototype.hasOwnProperty.call(body, 'achievements')) {
+      payload.achievements = body.achievements == null ? '' : String(body.achievements);
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'biography')) {
+      payload.biography = body.biography == null ? '' : String(body.biography);
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'summary')) {
+      payload.summary = body.summary == null ? '' : String(body.summary);
+    }
+    try {
+      await getDb().collection(collection).doc(_id).update(payload);
+    } catch (error) {
+      if (isCollectionMissingError(error)) {
+        await ensureHonorCollection(collection);
+        return res.status(404).json({ success: false, message: '集合刚创建，记录不存在，请先新增或重置七人' });
+      }
+      throw error;
+    }
+    res.json({ success: true, message: '更新成功' });
+  } catch (error) {
+    console.error('honor update 失败:', error);
+    res.status(500).json({ success: false, message: error.message || String(error) });
+  }
+});
+
+app.post('/honor/:collection/delete', async (req, res) => {
+  try {
+    const { collection } = req.params;
+    const _id = req.body && req.body._id;
+    if (!HONOR_COLLECTIONS.has(collection) || !_id) {
+      return res.status(400).json({ success: false, message: '参数错误' });
+    }
+    try {
+      await getDb().collection(collection).doc(_id).remove();
+    } catch (error) {
+      if (isCollectionMissingError(error)) {
+        await ensureHonorCollection(collection);
+        return res.json({ success: true, message: '集合不存在，已自动创建' });
+      }
+      throw error;
+    }
+    res.json({ success: true, message: '删除成功' });
+  } catch (error) {
+    console.error('honor delete 失败:', error);
+    res.status(500).json({ success: false, message: error.message || String(error) });
+  }
+});
+
 /** 仅同步本地（云库已更新时用） */
 app.post('/local/members/upsert', (req, res) => {
   try {
@@ -238,5 +453,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`本地族人: ${MEMBERS_LOCAL}`);
   console.log(`POST /members/update  /members/create  /members/delete`);
   console.log(`GET  /members/export-all`);
+  console.log(`POST /honor/{patriarchs|sages|elite}/{list|get|create|update|delete}`);
   console.log(`POST /call/{云函数名}`);
 });

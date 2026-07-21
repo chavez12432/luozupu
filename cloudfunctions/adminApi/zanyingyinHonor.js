@@ -25,39 +25,39 @@ const ZANYINGYIN_SAGES = [
   // —— 近世以前：衣冠官职 ——
   {
     id: 'zyy-gongjin',
-    name: '公瑾',
+    name: '罗公瑾',
     generation: 1,
     dynasty: '宋',
     achievements: '宋太宗兴国元年擒宋德明等，以功为江南兵钤驻剳吉州。',
-    memberDocId: '9eb3651569d76d7c0849eb8473b7c55b'
+    memberDocId: 'M0001'
   },
   {
     id: 'zyy-jilong',
-    name: '继隆',
+    name: '罗继隆',
     generation: 2,
     dynasty: '宋',
     achievements: '江东都统，拜陕西泾源节度使。',
-    memberDocId: '9eb3651569d76d7c0849eb850760e8f7'
+    memberDocId: 'M0002'
   },
   {
     id: 'zyy-zhongcheng',
-    name: '中成',
+    name: '罗中成',
     generation: 6,
     dynasty: '宋',
     achievements: '任江州德化县知县。',
-    memberDocId: '9eb3651569d76d7c0849eb8d6ff0de33'
+    memberDocId: 'M0010'
   },
   {
     id: 'zyy-huidi',
-    name: '惠迪',
+    name: '罗惠迪',
     generation: 7,
     dynasty: '宋',
     achievements: '庆典迪功郎。',
-    memberDocId: '9eb3651569d76d7c0849eb8f158d2ec5'
+    memberDocId: 'M0012'
   },
   {
     id: 'zyy-shiju',
-    name: '世举',
+    name: '罗世举',
     generation: 8,
     dynasty: '宋',
     achievements: '敕赐楚州文学。',
@@ -65,7 +65,7 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-shibeng',
-    name: '世伻',
+    name: '罗世伻',
     generation: 8,
     dynasty: '宋',
     achievements: '奏授将仕郎、永州佥判。',
@@ -73,7 +73,7 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-jingfu',
-    name: '敬夫',
+    name: '罗敬夫',
     generation: 9,
     dynasty: '宋',
     achievements: '授文林郎，判建康都税院，兼淮西江东总领军马钱粮事。',
@@ -81,7 +81,7 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-renfu',
-    name: '仁夫',
+    name: '罗仁夫',
     generation: 9,
     dynasty: '宋',
     achievements: '授迪功郎，寻州桂平簿尉。',
@@ -89,7 +89,7 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-jin',
-    name: '晋',
+    name: '罗晋',
     generation: 10,
     dynasty: '宋',
     achievements: '授登仕郎。',
@@ -97,7 +97,7 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-xun',
-    name: '巽',
+    name: '罗巽',
     generation: 10,
     dynasty: '宋',
     achievements: '授迪功郎。',
@@ -105,7 +105,7 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-maojv',
-    name: '懋举',
+    name: '罗懋举',
     generation: 13,
     dynasty: '元',
     achievements: '任黄州学正。',
@@ -113,7 +113,7 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-zhongxian',
-    name: '仲显',
+    name: '罗仲显',
     generation: 15,
     dynasty: '明',
     achievements: '任湖口县训导。',
@@ -121,7 +121,7 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-wuren',
-    name: '吾仁',
+    name: '罗吾仁',
     generation: 15,
     dynasty: '明',
     achievements: '授知县，未赴任卒。',
@@ -129,23 +129,23 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-ming',
-    name: '明',
+    name: '罗明',
     generation: 16,
     dynasty: '明',
     achievements: '赠南京山东道监察御史。',
-    memberDocId: '9eb3651569d76d7c0849eba32bfe67d3'
+    memberDocId: 'M0032'
   },
   {
     id: 'zyy-shan',
-    name: '善',
+    name: '罗善',
     generation: 17,
     dynasty: '明',
     achievements: '勅南京山东道监察御史，陞福建按察佥事、云南副使。',
-    memberDocId: '9eb3651569d76d7c0849eba705d570c8'
+    memberDocId: 'M0036'
   },
   {
     id: 'zyy-jianshan',
-    name: '兼善',
+    name: '罗兼善',
     generation: 17,
     dynasty: '明',
     achievements: '任河南解、汝、化三州学正。',
@@ -153,7 +153,7 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-jun',
-    name: '俊',
+    name: '罗俊',
     generation: 17,
     dynasty: '明',
     achievements: '任河南府永宁县，改任泉州府永春县司训。',
@@ -161,7 +161,7 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-ren17',
-    name: '仁',
+    name: '罗仁',
     generation: 17,
     dynasty: '明',
     achievements: '任广西桂林府通判。',
@@ -169,23 +169,23 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-riqian',
-    name: '日谦',
+    name: '罗日谦',
     generation: 18,
     dynasty: '明',
     achievements: '任浙江桐乡县主簿。',
-    memberDocId: '9eb3651569d76d7c0849eba97b3a2a57'
+    memberDocId: 'M0038'
   },
   {
     id: 'zyy-rirang',
-    name: '日让',
+    name: '罗日让',
     generation: 18,
     dynasty: '明',
     achievements: '任福建水师营守备。',
-    memberDocId: '9eb3651569d76d7c0849ebaa109598f6'
+    memberDocId: 'M0039'
   },
   {
     id: 'zyy-guang',
-    name: '光',
+    name: '罗光',
     generation: 19,
     dynasty: '明',
     achievements: '任四川成都府新繁县主簿。',
@@ -193,7 +193,7 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-xin',
-    name: '新',
+    name: '罗新',
     generation: 26,
     dynasty: '清',
     achievements: '赠儒林郎。',
@@ -201,31 +201,31 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-chaogan',
-    name: '朝干',
+    name: '罗朝干',
     generation: 27,
     dynasty: '清',
     achievements: '勅授儒林郎，即选州同知。',
-    memberDocId: '9eb3651569d76d7d0849ee2d51842422'
+    memberDocId: 'M1036'
   },
   {
     id: 'zyy-shanren',
-    name: '善任',
+    name: '罗善任',
     generation: 27,
     dynasty: '清',
     achievements: '登仕郎。',
-    memberDocId: '9eb3651569d76d7d0849f03a03a51506'
+    memberDocId: 'C0085'
   },
   {
     id: 'zyy-yongjian',
-    name: '永鉴',
+    name: '罗永鉴',
     generation: 28,
     dynasty: '清',
     achievements: '饮宾，徵仕郎。',
-    memberDocId: '9eb3651569d76d7d0849ee470241e05d'
+    memberDocId: 'M1062'
   },
   {
     id: 'zyy-dazhong',
-    name: '大忠',
+    name: '罗大忠',
     generation: 29,
     dynasty: '清',
     achievements: '登仕郎。',
@@ -233,7 +233,7 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-dahong',
-    name: '大鸿',
+    name: '罗大鸿',
     generation: 29,
     dynasty: '清',
     achievements: '登仕郎。',
@@ -241,15 +241,15 @@ const ZANYINGYIN_SAGES = [
   },
   {
     id: 'zyy-hongwei',
-    name: '宏位',
+    name: '罗宏位',
     generation: 29,
     dynasty: '清',
     achievements: '钦赐徵仕郎。',
-    memberDocId: '9eb3651569d76d7c0849eca36f584b5f'
+    memberDocId: 'M0282'
   },
   {
     id: 'zyy-zhi',
-    name: '智',
+    name: '罗智',
     generation: 30,
     dynasty: '清',
     achievements: '登仕郎。',
@@ -259,83 +259,83 @@ const ZANYINGYIN_SAGES = [
   // —— 近现代：公职事迹（学历已分至学历榜）——
   {
     id: 'zyy-guocai',
-    name: '国才',
+    name: '罗国才',
     generation: 34,
     dynasty: '近现代',
     achievements: '师政治部主任；江西省轻工业厅直属技工学校党委书记、校长。',
-    memberDocId: '9eb3651569d76d7d0849ef137436f26f'
+    memberDocId: 'M1264'
   },
   {
     id: 'zyy-decai',
-    name: '德才',
+    name: '罗德才',
     generation: 34,
     dynasty: '近现代',
     achievements: '洲湖镇党委书记、人大主席。',
-    memberDocId: '9eb3651569d76d7d0849ef0a3c6a0897'
+    memberDocId: 'M1255'
   },
   {
     id: 'zyy-jianming',
-    name: '建明',
+    name: '罗建明',
     generation: 34,
     dynasty: '近现代',
     achievements: '广州大学留校任教。',
-    memberDocId: '9eb3651569d76d7d0849f1005c3d575f'
+    memberDocId: 'C0284'
   },
   {
     id: 'zyy-qingliang',
-    name: '庆良',
+    name: '罗庆良',
     generation: 35,
     dynasty: '近现代',
     achievements: '中共峡江县县委常委、组织部部长。',
-    memberDocId: '9eb3651569d76d7d0849ef4d2de3fd2a'
+    memberDocId: 'M1345'
   },
   {
     id: 'zyy-xiangwen',
-    name: '相文',
+    name: '罗相文',
     generation: 35,
     dynasty: '近现代',
     achievements: '江西省委宣传部办公室副调研员。',
-    memberDocId: '9eb3651569d76d7d0849ed7001a6109c'
+    memberDocId: 'M0487'
   },
   {
     id: 'zyy-jinghua',
-    name: '京华',
+    name: '罗京华',
     generation: 35,
     dynasty: '近现代',
     achievements: '中级技师，营级干部。',
-    memberDocId: '9eb3651569d76d7d0849ef8f72b2bbf9'
+    memberDocId: 'M1380'
   },
   {
     id: 'zyy-jingli',
-    name: '京丽',
+    name: '罗京丽',
     generation: 35,
     dynasty: '近现代',
     achievements: '中级讲师。',
-    memberDocId: '9eb3651569d76d7d0849ef90659ff0f7'
+    memberDocId: 'M1381'
   },
   {
     id: 'zyy-zhijian',
-    name: '志坚',
+    name: '罗志坚',
     generation: 36,
     dynasty: '近现代',
     achievements: '中国联通赣州分公司，高级工程师。',
-    memberDocId: '9eb3651569d76d7d0849efb44b236805'
+    memberDocId: 'M1415'
   },
   {
     id: 'zyy-zhibing',
-    name: '志兵',
+    name: '罗志兵',
     generation: 36,
     dynasty: '近现代',
     achievements: '吉安市委秘书科科长，市委办公室副调研员。',
-    memberDocId: '9eb3651569d76d7d0849efb550341440'
+    memberDocId: 'M1416'
   },
   {
     id: 'zyy-zhifang',
-    name: '志芳',
+    name: '罗志芳',
     generation: 36,
     dynasty: '近现代',
     achievements: '会计师。',
-    memberDocId: '9eb3651569d76d7d0849efc618e0fd3f'
+    memberDocId: 'M1433'
   }
 ];
 
@@ -346,7 +346,7 @@ const ZANYINGYIN_SAGES = [
 const ZANYINGYIN_EDUCATION = [
   // 仅功名，不入乡贤
   {
-    name: '敬夫',
+    name: '罗敬夫',
     generation: 9,
     bucket: 'imperial',
     titles: ['进士'],
@@ -355,7 +355,7 @@ const ZANYINGYIN_EDUCATION = [
     dynastyEra: '宋'
   },
   {
-    name: '懋举',
+    name: '罗懋举',
     generation: 13,
     bucket: 'imperial',
     titles: ['进士'],
@@ -364,7 +364,7 @@ const ZANYINGYIN_EDUCATION = [
     dynastyEra: '元'
   },
   {
-    name: '兼善',
+    name: '罗兼善',
     generation: 17,
     bucket: 'imperial',
     titles: ['举人'],
@@ -373,7 +373,7 @@ const ZANYINGYIN_EDUCATION = [
     dynastyEra: '明'
   },
   {
-    name: '俊',
+    name: '罗俊',
     generation: 17,
     bucket: 'imperial',
     titles: ['贡生'],
@@ -382,7 +382,7 @@ const ZANYINGYIN_EDUCATION = [
     dynastyEra: '明'
   },
   {
-    name: '仁',
+    name: '罗仁',
     generation: 17,
     bucket: 'imperial',
     titles: ['贡生'],
@@ -391,48 +391,48 @@ const ZANYINGYIN_EDUCATION = [
     dynastyEra: '明'
   },
   {
-    name: '日谦',
+    name: '罗日谦',
     generation: 18,
     bucket: 'imperial',
     titles: ['贡生'],
     titleDetail: '岁贡',
-    memberDocId: '9eb3651569d76d7c0849eba97b3a2a57',
+    memberDocId: 'M0038',
     dynastyEra: '明'
   },
   {
-    name: '补衮',
+    name: '罗补衮',
     generation: 26,
     bucket: 'imperial',
     titles: ['廪生'],
     titleDetail: '程廪生',
-    memberDocId: '9eb3651569d76d7c0849ebfe1872c8c8',
+    memberDocId: 'M0116',
     dynastyEra: '清'
   },
   {
-    name: '永昌',
+    name: '罗永昌',
     generation: 28,
     bucket: 'imperial',
     titles: ['贡生'],
     titleDetail: '贡生',
-    memberDocId: '9eb3651569d76d7d0849ee37517bbec3',
+    memberDocId: 'M1046',
     dynastyEra: '清'
   },
   {
-    name: '永景',
+    name: '罗永景',
     generation: 28,
     bucket: 'imperial',
     titles: ['廪生'],
     titleDetail: '程廪生',
-    memberDocId: '9eb3651569d76d7d0849ee3a73909af2',
+    memberDocId: 'M1049',
     dynastyEra: '清'
   },
   // 近现代：仅列学历、无公职或公职已在乡贤分置者，补入学历榜缺口
   {
-    name: '锋良',
+    name: '罗锋良',
     generation: 35,
     bucket: 'modern',
     educations: [{ degree: '大学', school: '北京地质学院', year: null }],
-    memberDocId: '9eb3651569d76d7d0849ef436009333a',
+    memberDocId: 'M1336',
     birthText: '1988年2月2日',
     dynastyEra: '1988年'
   }
@@ -443,15 +443,20 @@ function listZanyingyinSages(dynasty) {
   if (dynasty && dynasty !== '全部') {
     list = list.filter(item => item.dynasty === dynasty);
   }
-  return list.map(item => ({
-    _id: item.id,
-    name: item.name,
-    generation: item.generation,
-    dynasty: item.dynasty,
-    achievements: item.achievements,
-    memberDocId: item.memberDocId || '',
-    hasLink: !!item.memberDocId
-  }));
+  return list.map(item => {
+    let name = String(item.name || '').trim();
+    while (name.startsWith('罗') && name.length > 1) name = name.slice(1).trim();
+    name = name ? `罗${name}` : '';
+    return {
+      _id: item.id,
+      name,
+      generation: item.generation,
+      dynasty: item.dynasty,
+      achievements: item.achievements,
+      memberDocId: item.memberDocId || '',
+      hasLink: !!item.memberDocId
+    };
+  });
 }
 
 /**

@@ -1,7 +1,7 @@
 <!--pages/elite/elite.wxml-->
 <view class="container">
   <view class="header">
-    <view class="header-title">⭐ 乡贤榜</view>
+    <view class="header-title">⭐ 群英榜</view>
     <view class="header-sub">当今族人撷英</view>
   </view>
 
