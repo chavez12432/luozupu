@@ -4,6 +4,14 @@ const { FAMILY_TREE_HALLS } = require('../../utils/familyTreeHalls');
 const authGuard = require('../../utils/authGuard');
 const nav = require('../../utils/nav');
 
+/** 世系图用户缩放档位（按比例缩放即可，极小比例可不求清晰） */
+const SCALE_STEPS = [1.5, 1, 0.75, 0.5, 0.3, 0.1];
+const DEFAULT_SCALE_INDEX = 1; // 100%
+
+function scaleLabelOf(scale) {
+  return `${Math.round(Number(scale) * 100)}%`;
+}
+
 Page({
   data: {
     mode: 'hub',
@@ -11,8 +19,9 @@ Page({
     currentBranch: '',
     loading: false,
     stats: null,
-    scale: 1,
-    scaleLabel: '100%',
+    scale: SCALE_STEPS[DEFAULT_SCALE_INDEX],
+    scaleIndex: DEFAULT_SCALE_INDEX,
+    scaleLabel: scaleLabelOf(SCALE_STEPS[DEFAULT_SCALE_INDEX]),
     displayWidth: 0,
     displayHeight: 0
   },
@@ -21,25 +30,33 @@ Page({
   canvasNode: null,
   drawScale: 1,
 
-  onLoad() {
-    if (!authGuard.requireAuth({ replace: true })) return;
+  async onLoad() {
+    if (!(await authGuard.requireAuthAsync({ replace: true }))) return;
     // 四堂入口用静态数据，不请求云端
     this.setData({ mode: 'hub', halls: FAMILY_TREE_HALLS, loading: false });
   },
 
-  onShow() {
-    authGuard.requireAuth({ replace: true });
+  async onShow() {
+    await authGuard.requireAuthAsync({ replace: true });
   },
 
   openHall(e) {
     const branch = e.currentTarget.dataset.branch;
-    this.setData({ currentBranch: branch, mode: 'chart', scale: 1, scaleLabel: '100%' });
+    const scale = SCALE_STEPS[DEFAULT_SCALE_INDEX];
+    this.setData({
+      currentBranch: branch,
+      mode: 'chart',
+      scale,
+      scaleIndex: DEFAULT_SCALE_INDEX,
+      scaleLabel: scaleLabelOf(scale)
+    });
     this.loadChart(branch);
   },
 
   backToHub() {
     this.layout = null;
     this.canvasNode = null;
+    const scale = SCALE_STEPS[DEFAULT_SCALE_INDEX];
     this.setData({
       mode: 'hub',
       loading: false,
@@ -47,8 +64,9 @@ Page({
       stats: null,
       displayWidth: 0,
       displayHeight: 0,
-      scale: 1,
-      scaleLabel: '100%'
+      scale,
+      scaleIndex: DEFAULT_SCALE_INDEX,
+      scaleLabel: scaleLabelOf(scale)
     });
   },
 
@@ -111,33 +129,61 @@ Page({
         const cssW = Math.ceil(layout.width * drawScale * userScale);
         const cssH = Math.ceil(layout.height * drawScale * userScale);
 
-        canvas.width = cssW * dpr;
-        canvas.height = cssH * dpr;
-        ctx.scale(dpr * drawScale * userScale, dpr * drawScale * userScale);
+        // 物理像素硬顶，避免 150%×dpr 撑爆 Canvas 导致白屏/闪退
+        const MAX_PHYS = 4096;
+        const physW = cssW * dpr;
+        const physH = cssH * dpr;
+        const maxSide = Math.max(physW, physH, 1);
+        const storeScale = maxSide > MAX_PHYS ? MAX_PHYS / maxSide : 1;
+
+        canvas.width = Math.max(1, Math.floor(physW * storeScale));
+        canvas.height = Math.max(1, Math.floor(physH * storeScale));
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr * drawScale * userScale * storeScale, dpr * drawScale * userScale * storeScale);
         drawPedigree(ctx, layout);
       });
   },
 
   zoomIn() {
-    const scale = Math.min(2.5, +(this.data.scale + 0.25).toFixed(2));
-    this.applyScale(scale);
+    const idx = Math.max(0, (this.data.scaleIndex != null ? this.data.scaleIndex : DEFAULT_SCALE_INDEX) - 1);
+    this.applyScaleAt(idx);
   },
 
   zoomOut() {
-    const scale = Math.max(0.5, +(this.data.scale - 0.25).toFixed(2));
-    this.applyScale(scale);
+    const idx = Math.min(
+      SCALE_STEPS.length - 1,
+      (this.data.scaleIndex != null ? this.data.scaleIndex : DEFAULT_SCALE_INDEX) + 1
+    );
+    this.applyScaleAt(idx);
   },
 
-  applyScale(scale) {
+  applyScaleAt(scaleIndex) {
     if (!this.layout) return;
+    const idx = Math.max(0, Math.min(SCALE_STEPS.length - 1, scaleIndex));
+    const scale = SCALE_STEPS[idx];
     const drawScale = this.drawScale || 1;
     this.setData({
       scale,
-      scaleLabel: `${Math.round(scale * 100)}%`,
+      scaleIndex: idx,
+      scaleLabel: scaleLabelOf(scale),
       displayWidth: Math.ceil(this.layout.width * drawScale * scale),
       displayHeight: Math.ceil(this.layout.height * drawScale * scale)
     });
     setTimeout(() => this.renderCanvas(), 50);
+  },
+
+  applyScale(scale) {
+    // 兼容旧调用：落到最接近的档位
+    let best = 0;
+    let bestDiff = Infinity;
+    SCALE_STEPS.forEach((s, i) => {
+      const d = Math.abs(s - scale);
+      if (d < bestDiff) {
+        bestDiff = d;
+        best = i;
+      }
+    });
+    this.applyScaleAt(best);
   },
 
   goBack() {

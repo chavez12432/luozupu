@@ -9,8 +9,27 @@ const {
   evaluatePermission,
   pickEditable,
   memberKey,
-  RELATION
+  RELATION,
+  MAX_ADD_FAMILY
 } = require('./familyPermission');
+const { nextIdsForBranch } = require('./memberIdAssign');
+
+function countCreatedByViewerLocal(viewer) {
+  if (!viewer) return 0;
+  localDb.init();
+  const keys = new Set(
+    [viewer._id, memberKey(viewer), viewer.originalId, viewer.memberId]
+      .filter((v) => v != null && String(v) !== '')
+      .map(String)
+  );
+  const list = (localDb.store && localDb.store.members) || [];
+  return list.filter((m) => {
+    if (!m) return false;
+    const a = m.createdByPersonId != null ? String(m.createdByPersonId) : '';
+    const b = m.createdByKey != null ? String(m.createdByKey) : '';
+    return (a && keys.has(a)) || (b && keys.has(b));
+  }).length;
+}
 
 function getVerifiedPersonIdSet() {
   if (config.isLocalMode()) {
@@ -38,13 +57,15 @@ function isTargetVerifiedLocal(personId) {
 function getManagePermission(targetId) {
   const viewer = getViewerMember();
   const target = localDb.findById('members', targetId);
+  const addFamilyUsed = countCreatedByViewerLocal(viewer);
   if (!viewer || !target) {
     return {
       success: true,
       permission: evaluatePermission({
         viewerMember: viewer,
         targetMember: target,
-        targetVerified: false
+        targetVerified: false,
+        addFamilyUsed
       })
     };
   }
@@ -53,7 +74,8 @@ function getManagePermission(targetId) {
     permission: evaluatePermission({
       viewerMember: viewer,
       targetMember: target,
-      targetVerified: isTargetVerifiedLocal(targetId)
+      targetVerified: isTargetVerifiedLocal(targetId),
+      addFamilyUsed
     }),
     viewerId: viewer._id,
     targetId
@@ -115,39 +137,60 @@ function localAddFamily(payload) {
   if (!viewer) return { success: false, message: '请先完成身份认证' };
 
   const relation = payload.relation; // child | spouse
-  const name = withClanSurname(String(payload.name || '').trim());
+  const rawName = String(payload.name || '').trim();
   const gender = payload.gender === '女' ? '女' : '男';
+  // 与云端一致：含「氏」视为外姓表述，不加「罗」
+  const name = /氏/.test(rawName) ? rawName.replace(/^罗+/, '') : withClanSurname(rawName);
   if (!name) return { success: false, message: '请填写姓名' };
 
+  const addFamilyUsed = countCreatedByViewerLocal(viewer);
   const selfPerm = evaluatePermission({
     viewerMember: viewer,
     targetMember: viewer,
-    targetVerified: true
+    targetVerified: true,
+    addFamilyUsed
   });
   if (!selfPerm.canAddChild && relation === 'child') {
-    return { success: false, message: '无权添加子女' };
+    return { success: false, message: selfPerm.lockReason || '无权添加子女', code: 'ADD_LIMIT' };
   }
   if (!selfPerm.canAddSpouse && relation === 'spouse') {
-    return { success: false, message: '无权添加配偶' };
+    return { success: false, message: selfPerm.lockReason || '无权添加配偶', code: 'ADD_LIMIT' };
+  }
+  if (addFamilyUsed >= MAX_ADD_FAMILY) {
+    return {
+      success: false,
+      message: `每人最多新增 ${MAX_ADD_FAMILY} 位族人资料，已达上限`,
+      code: 'ADD_LIMIT'
+    };
   }
 
-  const originalId = localDb.nextLocalOriginalId();
+  localDb.init();
+  const branch = viewer.branch || '';
+  const ids = nextIdsForBranch(localDb.store.members || [], branch);
+  const originalId = ids.originalId;
+  const memberId = ids.memberId;
   const vKey = memberKey(viewer);
+  const creatorMeta = {
+    createdByPersonId: viewer._id != null ? String(viewer._id) : '',
+    createdByKey: vKey,
+    eraCategory: 'modern'
+  };
 
   if (relation === 'child') {
     const member = {
       name,
       gender,
       generation: (viewer.generation || 0) + 1,
-      branch: viewer.branch || '',
+      branch,
       fatherId: vKey,
       fatherName: viewer.name,
       originalId,
-      memberId: `M${String(originalId).padStart(6, '0')}`,
+      memberId,
       birthDate: { lunar: {} },
       remark: '',
       phone: '',
-      residence: ''
+      residence: '',
+      ...creatorMeta
     };
     return localDb.addMemberLocal(member);
   }
@@ -157,15 +200,16 @@ function localAddFamily(payload) {
       name,
       gender,
       generation: viewer.generation || 0,
-      branch: viewer.branch || '',
+      branch,
       fatherId: '',
       spouseId: vKey,
       originalId,
-      memberId: `M${String(originalId).padStart(6, '0')}`,
+      memberId,
       birthDate: { lunar: {} },
       remark: '',
       phone: '',
-      residence: ''
+      residence: '',
+      ...creatorMeta
     };
     const addRes = localDb.addMemberLocal(member);
     if (!addRes.success) return addRes;

@@ -1,6 +1,7 @@
 {
-  "navigationBarTitleText": "族谱序文",
+  "navigationStyle": "custom",
   "usingComponents": {
-    "clan-tabbar": "/components/clan-tabbar/clan-tabbar"
+    "clan-tabbar": "/components/clan-tabbar/clan-tabbar",
+    "scenic-nav": "/components/scenic-nav/scenic-nav"
   }
 }

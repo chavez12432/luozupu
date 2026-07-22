@@ -2,7 +2,7 @@
 <view class="container">
   <view class="user-section">
     <view class="avatar">
-      <text class="avatar-text">{{account ? account.name[0] : '罗'}}</text>
+      <text class="avatar-text">{{nameInitial || '族'}}</text>
     </view>
     <view class="user-info">
       <text class="user-name">{{account ? account.name : '未认证用户'}}</text>

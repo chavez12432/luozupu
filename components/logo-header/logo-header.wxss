@@ -48,3 +48,14 @@
   height: 4rpx;
   background: linear-gradient(90deg, transparent, #C19A4B, transparent);
 }
+
+.tone-light .logo-title,
+.tone-light .logo-motto {
+  color: #fff;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.35);
+}
+
+.tone-light .logo-sub {
+  color: #F0D78C;
+  text-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
+}

@@ -5,8 +5,12 @@ const authService = require('./utils/authService');
 App({
   onLaunch: function () {
     if (config.isLocalMode()) {
-      dataService.bootstrap();
-      this.globalData.authReadyPromise = Promise.resolve(authService.bootstrap());
+      this.globalData.authReadyPromise = dataService.bootstrapAsync()
+        .then(() => authService.bootstrap())
+        .catch((err) => {
+          console.warn('[app] local bootstrap', err);
+          return authService.bootstrap();
+        });
       console.log('高洲罗氏族谱小程序启动（本地调试模式）');
       return;
     }

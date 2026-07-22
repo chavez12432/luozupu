@@ -7,6 +7,7 @@ Page({
   data: {
     isVerified: false,
     account: null,
+    nameInitial: '',
     phoneMasked: '',
     isAdmin: false,
     isLocal: false,
@@ -23,10 +24,14 @@ Page({
   },
 
   refreshAccount() {
+    const { displayNameChar } = require('../../utils/nameInitial');
     const account = authService.getCachedAccount();
     this.setData({
       isVerified: !!account,
       account,
+      nameInitial: account
+        ? displayNameChar(account.name, {})
+        : '',
       phoneMasked: account ? authService.maskPhone(account.phone) : '',
       isLocal: config.isLocalMode()
     });

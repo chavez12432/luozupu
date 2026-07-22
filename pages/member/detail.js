@@ -5,6 +5,7 @@ const memberManageService = require('../../utils/memberManageService');
 Page({
   data: {
     member: null,
+    nameInitial: '',
     loading: true,
     showPhotoCanvas: false,
     canvasWidth: 360,
@@ -20,8 +21,8 @@ Page({
     }
   },
 
-  onLoad(options) {
-    if (!authGuard.requireAuth({ replace: true })) return;
+  async onLoad(options) {
+    if (!(await authGuard.requireAuthAsync({ replace: true }))) return;
     this.memberId = options.id;
     this._firstShow = true;
     this.loadMemberDetail(options.id);
@@ -46,8 +47,14 @@ Page({
       });
 
       if (res.result && res.result.success) {
+        const member = this.normalizeSpouseLinks(res.result.data);
+        const { displayNameChar } = require('../../utils/nameInitial');
         this.setData({
-          member: this.normalizeSpouseLinks(res.result.data),
+          member,
+          nameInitial: displayNameChar(member && member.name, {
+            generation: member && member.generation,
+            branch: member && member.branch
+          }),
           loading: false
         });
         this.loadPermission(id);
@@ -117,7 +124,10 @@ Page({
 
   goAddChild() {
     if (!this.data.permission.canAddChild) {
-      wx.showToast({ title: '无权添加子女', icon: 'none' });
+      wx.showToast({
+        title: this.data.permission.lockReason || '无权添加子女',
+        icon: 'none'
+      });
       return;
     }
     wx.navigateTo({ url: '/pages/member/add-family?relation=child' });
@@ -125,7 +135,10 @@ Page({
 
   goAddSpouse() {
     if (!this.data.permission.canAddSpouse) {
-      wx.showToast({ title: '无权添加配偶', icon: 'none' });
+      wx.showToast({
+        title: this.data.permission.lockReason || '无权添加配偶',
+        icon: 'none'
+      });
       return;
     }
     wx.navigateTo({ url: '/pages/member/add-family?relation=spouse' });

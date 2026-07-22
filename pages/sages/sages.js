@@ -38,7 +38,9 @@ Page({
           action: 'listSages',
           dynasty: this.data.currentDynasty === '全部' ? null : this.data.currentDynasty,
           page: this.data.page,
-          pageSize: 50
+          pageSize: 50,
+          // 清理臆造乡贤请走管理端 purgeFabricatedSages，勿挂在列表首屏
+          purgeFabricated: false
         }
       });
 

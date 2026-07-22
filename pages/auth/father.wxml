@@ -1,17 +1,18 @@
 <view class="auth-page">
+  <scenic-nav title="父亲信息验证" scene="auth" showBack="{{true}}"></scenic-nav>
   <view class="auth-card">
     <view class="auth-title">父亲姓名验证</view>
     <view class="auth-desc">
       <text class="desc-line">请填写父亲在族谱中的全名</text>
       <text class="desc-line">必须带「罗」姓，不可只填名字</text>
-      <text class="desc-line">正确示例：罗冬香</text>
-      <text class="desc-line desc-warn">错误示例：鼓声（缺少姓氏）</text>
+      
+      <text class="desc-line desc-warn">错误示例：公瑾（缺少姓氏）</text>
     </view>
 
     <text class="auth-label">父亲全名</text>
     <input
       class="auth-input"
-      placeholder="请输入如：罗冬香"
+      placeholder="请输入如：罗公瑾"
       value="{{fatherName}}"
       bindinput="onInput"
       maxlength="20"

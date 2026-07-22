@@ -33,6 +33,14 @@ Page({
     wx.navigateTo({ url: '/pages/graduates/graduates' });
   },
 
+  goToSongshou() {
+    wx.navigateTo({ url: '/pages/songshou/list' });
+  },
+
+  goToFengtu() {
+    wx.navigateTo({ url: '/pages/fengtu/list' });
+  },
+
   goToHall() {
     nav.goToHall();
   },

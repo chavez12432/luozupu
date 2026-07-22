@@ -1,5 +1,6 @@
 <!--pages/auth/welcome.wxml-->
 <view class="auth-page paper-bg">
+  <scenic-nav title="宗亲验证" scene="auth" showBack="{{true}}"></scenic-nav>
   <view class="auth-card clan-card">
     <logo-header size="md" showMotto="{{false}}" subtitle=""></logo-header>
 
@@ -7,8 +8,8 @@
     <view class="auth-welcome-sub">欢迎进入江西安福高洲罗氏数字家谱</view>
 
     <view class="auth-desc">
-      <text class="desc-line">本系统仅向本族成员开放，请完成身份验证，完成验证后，可自己修改本人及直系亲属的资料。如果你发现自己输入了正确的资料，却不能进入，请联系管理员修改。</text>
-      <text class="desc-line">游客可浏览「序文」；族人、谱树、荣誉等需认证后使用。</text>
+      <text class="desc-line">本系统仅向本族今人开放身份验证（古人资料已锁死，不可验证）。完成验证后，可自己修改本人及直系亲属的资料；每人最多新增 10 位族人。若资料正确仍无法进入，请联系管理员。</text>
+      <text class="desc-line">游客可浏览「序文」；族人、谱树、牌坊等需认证后使用。</text>
     </view>
 
     <seal-button text="我是本族成员 · 进入验证" bind:click="startVerify"></seal-button>

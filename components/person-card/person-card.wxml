@@ -1,5 +1,5 @@
 <view class="person-card" bindtap="onTap">
-  <view class="avatar">{{member.name[0]}}</view>
+  <view class="avatar">{{initial}}</view>
   <view class="info">
     <view class="name-row">
       <text class="name">{{member.name}}</text>

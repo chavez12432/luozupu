@@ -3,6 +3,10 @@
  */
 const config = require('./config');
 const localDb = require('./localDb');
+const { isVerifiableModernMember } = require('./memberEra');
+
+const ANCIENT_LOCKED_MSG =
+  '古人族谱资料已锁死，不可用于身份验证。仅今人（民国元年1912年起）可验证入谱。';
 
 const ACCOUNT_KEY = 'auth_user_account';
 const TICKET_KEY = 'auth_verify_ticket';
@@ -132,12 +136,21 @@ function localVerifyName({ name }) {
       code: 'NEED_FULL_NAME'
     };
   }
-  const matches = localDb.findMembersByName(full);
-  if (!matches.length) {
+  const allMatches = localDb.findMembersByName(full);
+  if (!allMatches.length) {
     return {
       success: false,
       message: '未找到您的族谱信息。请确认全名是否正确（须含「罗」姓）。',
       code: 'NOT_FOUND',
+      canAppeal: true
+    };
+  }
+  const matches = allMatches.filter(isVerifiableModernMember);
+  if (!matches.length) {
+    return {
+      success: false,
+      message: ANCIENT_LOCKED_MSG,
+      code: 'ANCIENT_LOCKED',
       canAppeal: true
     };
   }
@@ -169,7 +182,16 @@ function localVerifyBirthday({ ticketId, year, month, day }) {
 
   const members = (ticket.candidatePersonIds || [])
     .map(id => localDb.findById('members', id))
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter(isVerifiableModernMember);
+  if (!members.length) {
+    return {
+      success: false,
+      message: ANCIENT_LOCKED_MSG,
+      code: 'ANCIENT_LOCKED',
+      canAppeal: true
+    };
+  }
   const matched = members.filter(m => localDb.matchLunarBirth(m, year, month, day));
 
   if (!matched.length) {
@@ -217,7 +239,16 @@ function localVerifyFather({ ticketId, fatherName }) {
 
   const members = (ticket.candidatePersonIds || [])
     .map(id => localDb.findById('members', id))
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter(isVerifiableModernMember);
+  if (!members.length) {
+    return {
+      success: false,
+      message: ANCIENT_LOCKED_MSG,
+      code: 'ANCIENT_LOCKED',
+      canAppeal: true
+    };
+  }
   const matched = members.filter(m => localDb.getFatherDisplayName(m) === fname);
 
   if (!matched.length) {
@@ -239,6 +270,14 @@ function localVerifyFather({ ticketId, fatherName }) {
   }
 
   const person = matched[0];
+  if (!isVerifiableModernMember(person)) {
+    return {
+      success: false,
+      message: ANCIENT_LOCKED_MSG,
+      code: 'ANCIENT_LOCKED',
+      canAppeal: true
+    };
+  }
   const accounts = wx.getStorageSync('auth_all_accounts') || [];
   if (accounts.some(a => a.personId === person._id)) {
     return { success: false, message: '该族谱成员已绑定其他账号', code: 'PERSON_BOUND' };
@@ -276,6 +315,14 @@ function localBindPhone({ ticketId, phone }) {
   const personId = (ticket.candidatePersonIds || [])[0];
   const member = localDb.findById('members', personId);
   if (!member) return { success: false, message: '族谱成员不存在' };
+  if (!isVerifiableModernMember(member)) {
+    return {
+      success: false,
+      message: ANCIENT_LOCKED_MSG,
+      code: 'ANCIENT_LOCKED',
+      canAppeal: true
+    };
+  }
 
   const phoneNum = String(phone || '').trim();
   if (!/^1\d{10}$/.test(phoneNum)) {

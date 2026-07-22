@@ -30,15 +30,21 @@ function applyLib(lib) {
 
 function tryRequireSync() {
   try {
-    // 主包路径（需未在 packOptions.ignore 中排除）
+    // 分包路径（主包已排除 utils/vendor/lunar.js 以控 2MB）
     // eslint-disable-next-line global-require
-    return applyLib(require('./vendor/lunar.js'));
+    return applyLib(require('../pkg-lib/vendor/lunar.js'));
   } catch (e1) {
     try {
       // eslint-disable-next-line global-require
       return applyLib(require('../pkg-local/vendor/lunar.js'));
     } catch (e2) {
-      return false;
+      try {
+        // 开发态兜底
+        // eslint-disable-next-line global-require
+        return applyLib(require('./vendor/lunar.js'));
+      } catch (e3) {
+        return false;
+      }
     }
   }
 }
@@ -62,8 +68,9 @@ function preloadLunarLib() {
           .then((lib) => applyLib(lib))
           .catch(() => false);
 
-      tryAsync('./vendor/lunar.js')
+      tryAsync('../pkg-lib/vendor/lunar.js')
         .then((ok) => (ok ? true : tryAsync('../pkg-local/vendor/lunar.js')))
+        .then((ok) => (ok ? true : tryAsync('./vendor/lunar.js')))
         .then((ok) => {
           if (!ok) {
             console.warn('[dateConvert] lunar 异步加载失败（仅影响历法互转）');
@@ -79,11 +86,14 @@ function preloadLunarLib() {
     }
 
     wx.loadSubpackage({
-      name: 'pkg-local',
+      name: 'pkg-lib',
       success: loadModule,
       fail: () => {
-        // 无分包时仍尝试主包/相对路径
-        loadModule();
+        wx.loadSubpackage({
+          name: 'pkg-local',
+          success: loadModule,
+          fail: loadModule
+        });
       }
     });
   });

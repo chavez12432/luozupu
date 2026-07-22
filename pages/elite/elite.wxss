@@ -6,21 +6,21 @@
 }
 
 .header {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   color: white;
-  padding: 40rpx 30rpx;
-  text-align: center;
+  background: #9B1515;
 }
 
 .header-title {
   font-size: 36rpx;
   font-weight: bold;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.35);
 }
 
 .header-sub {
   margin-top: 12rpx;
   font-size: 24rpx;
-  opacity: 0.9;
+  opacity: 0.92;
+  text-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
 }
 
 .content {

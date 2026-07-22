@@ -1,4 +1,4 @@
-<view class="logo-header size-{{size}}">
+<view class="logo-header size-{{size}} tone-{{tone}}">
   <image class="logo-img" src="{{logoPath}}" mode="aspectFit" />
   <view class="logo-title">{{title}}</view>
   <view class="logo-sub" wx:if="{{subtitle}}">{{subtitle}}</view>

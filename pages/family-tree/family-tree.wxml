@@ -1,11 +1,16 @@
 <!--pages/family-tree/family-tree.wxml-->
 <view class="container {{mode === 'hub' ? 'hub-mode' : 'chart-mode'}}">
+  <scenic-nav title="家族谱树" scene="tree"></scenic-nav>
   <!-- 四堂入口（静态，立即展示） -->
   <block wx:if="{{mode === 'hub'}}">
-    <view class="header">
-      <image class="header-logo" src="/images/logo.jpg" mode="aspectFit" />
-      <view class="header-title">家族谱树</view>
-      <view class="header-sub">四堂世系图 · 血脉相承</view>
+    <view class="header scenic-header scenic-header--tall">
+      <image class="scenic-header__bg" src="/images/headers/tree.jpg" mode="aspectFill" />
+      <view class="scenic-header__mask"></view>
+      <view class="scenic-header__body">
+        <image class="header-logo" src="/images/logo.jpg" mode="aspectFit" />
+        <view class="header-title">家族谱树</view>
+        <view class="header-sub">四堂世系图 · 血脉相承</view>
+      </view>
     </view>
 
     <view class="hub-body">

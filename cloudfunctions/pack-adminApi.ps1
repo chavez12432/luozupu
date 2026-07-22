@@ -1,6 +1,6 @@
 # 打包 adminApi 云函数脚本
-$sourceDir = "d:\DNS\luozupu\project\cloudfunctions\adminApi"
-$zipPath = "d:\DNS\luozupu\project\cloudfunctions\adminApi.zip"
+$sourceDir = "d:\家谱\luozupu\project\cloudfunctions\adminApi"
+$zipPath = "d:\家谱\luozupu\project\cloudfunctions\adminApi.zip"
 
 Write-Host "正在打包 adminApi 云函数..."
 

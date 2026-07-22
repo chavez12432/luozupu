@@ -1,9 +1,14 @@
 <!--pages/honor/index.wxml-->
 <view class="container paper-bg">
-  <view class="header-card">
-    <image class="header-logo" src="/images/logo.jpg" mode="aspectFit" />
-    <view class="header-title">荣誉堂</view>
-    <view class="header-sub">衣冠仕宦 · 乡贤撷英</view>
+  <scenic-nav title="牌坊" scene="honor"></scenic-nav>
+  <view class="header-card scenic-header scenic-header--tall">
+    <image class="scenic-header__bg" src="/images/headers/honor.jpg" mode="aspectFill" />
+    <view class="scenic-header__mask"></view>
+    <view class="scenic-header__body">
+      <image class="header-logo" src="/images/logo.jpg" mode="aspectFit" />
+      <view class="header-title">牌坊</view>
+      <view class="header-sub">衣冠仕宦 · 寿序风土</view>
+    </view>
   </view>
 
   <view class="module-section">
@@ -22,7 +27,7 @@
 
       <view class="module-item" bindtap="goToElite">
         <view class="module-seal">贤</view>
-        <view class="module-name">乡贤榜</view>
+        <view class="module-name">群英榜</view>
         <view class="module-desc">当今族人撷英</view>
       </view>
 
@@ -30,6 +35,18 @@
         <view class="module-seal">学</view>
         <view class="module-name">学历榜</view>
         <view class="module-desc">功名与学历</view>
+      </view>
+
+      <view class="module-item" bindtap="goToSongshou">
+        <view class="module-seal">寿</view>
+        <view class="module-name">颂寿篇</view>
+        <view class="module-desc">历代寿序六篇</view>
+      </view>
+
+      <view class="module-item" bindtap="goToFengtu">
+        <view class="module-seal">志</view>
+        <view class="module-name">风土志</view>
+        <view class="module-desc">堂记祠宇 · 八景</view>
       </view>
     </view>
   </view>

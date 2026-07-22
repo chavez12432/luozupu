@@ -6,6 +6,7 @@ const { buildEducationHonorLists } = require('./educationHonor');
 const { listZanyingyinSages, INTRO: SAGES_INTRO } = require('./zanyingyinHonor');
 const { ELITE_HEROES } = require('./eliteHeroes');
 const { withClanSurname } = require('./clanName');
+const { createFengtuManage } = require('./fengtuManage');
 const {
   parseSpousesFromRemark,
   spousesToSpouseInfo,
@@ -296,6 +297,14 @@ cloud.init({
 
 const db = cloud.database();
 
+const fengtuApi = createFengtuManage({
+  db,
+  cloud,
+  ensureCollection,
+  isCollectionMissingError,
+  safeCollectionCount
+});
+
 // 主入口函数
 exports.main = async (event, context) => {
   // 腾讯云 HTTP 触发的 event 结构
@@ -421,6 +430,21 @@ exports.main = async (event, context) => {
         return await resetEliteHeroes();
       case 'migrateHonorMemberLinks':
         return await migrateHonorMemberLinks(params);
+      case 'purgeFabricatedSages':
+        return await purgeFabricatedSages();
+      // 风土志
+      case 'listFengtu':
+        return await fengtuApi.listFengtu(params);
+      case 'getFengtu':
+        return await fengtuApi.getFengtu(paramsData);
+      case 'createFengtu':
+        return await fengtuApi.createFengtu(paramsData);
+      case 'updateFengtu':
+        return await fengtuApi.updateFengtu(paramsData);
+      case 'deleteFengtu':
+        return await fengtuApi.deleteFengtu(paramsData);
+      case 'upsertFengtuSeed':
+        return await fengtuApi.upsertFengtuSeed((paramsData && paramsData.seedId) || params.seedId || 'ft-bajing');
       // 学历榜相关操作
       case 'listEducationHonor':
         return await listEducationHonor(params);
@@ -621,35 +645,18 @@ async function getMember(data) {
   };
 }
 
-// 创建成员
-async function nextOriginalId() {
-  const res = await db.collection('members')
-    .orderBy('originalId', 'desc')
-    .limit(1)
-    .get()
-    .catch(() => ({ data: [] }));
-  const top = res.data[0];
-  const n = top && top.originalId != null ? Number(top.originalId) : 0;
-  return (isNaN(n) ? 0 : n) + 1;
-}
-
+// 创建成员（按堂份自动发号：忠爱堂 C####，其余堂 M####）
 async function createMember(data) {
+  const { assignMemberIdsForCreate } = require('./memberIdAssign');
   const payload = { ...(data || {}) };
   if (payload.memberId != null && String(payload.memberId).trim() === '') delete payload.memberId;
   if (payload.originalId === '') delete payload.originalId;
 
-  if (!payload.memberId || payload.originalId == null) {
-    const originalId =
-      payload.originalId != null && payload.originalId !== ''
-        ? Number(payload.originalId)
-        : await nextOriginalId();
-    if (!payload.originalId) payload.originalId = originalId;
-    if (!payload.memberId) payload.memberId = 'M' + String(originalId).padStart(6, '0');
-  }
+  const withIds = await assignMemberIdsForCreate(db, payload, []);
 
   const result = await db.collection('members').add({
     data: {
-      ...payload,
+      ...withIds,
       createdAt: db.serverDate(),
       updatedAt: db.serverDate()
     }
@@ -658,8 +665,8 @@ async function createMember(data) {
     success: true,
     data: {
       _id: result._id,
-      memberId: payload.memberId,
-      originalId: payload.originalId
+      memberId: withIds.memberId,
+      originalId: withIds.originalId
     }
   };
 }
@@ -1290,6 +1297,68 @@ async function deletePatriarch(data) {
   }
 }
 
+/** 乡贤行是否能在 members 中解析到真人 */
+async function sageHasRealMember(row) {
+  const keys = [
+    row && row.memberDocId,
+    row && row.originalId,
+    row && row.memberId
+  ].filter(v => v != null && String(v).trim() !== '').map(v => String(v).trim());
+  const uniq = [...new Set(keys)];
+  for (const id of uniq) {
+    try {
+      const doc = await db.collection('members').doc(id).get();
+      if (doc && doc.data) return true;
+    } catch (e) { /* 非云 _id 时忽略 */ }
+    try {
+      const byOid = await db.collection('members').where({ originalId: id }).limit(1).get();
+      if (byOid.data && byOid.data.length) return true;
+      const byMid = await db.collection('members').where({ memberId: id }).limit(1).get();
+      if (byMid.data && byMid.data.length) return true;
+    } catch (e) {
+      if (!isCollectionMissingError(e)) throw e;
+    }
+  }
+  return false;
+}
+
+/**
+ * 清除云库乡贤中「成员库查无」的臆造条目，并按当前簪缨引补种真人。
+ */
+async function purgeFabricatedSages() {
+  await ensureCollection('sages');
+  const toRemove = [];
+  let skip = 0;
+  while (true) {
+    let rows = [];
+    try {
+      const res = await db.collection('sages').skip(skip).limit(100).get();
+      rows = res.data || [];
+    } catch (e) {
+      if (isCollectionMissingError(e)) break;
+      throw e;
+    }
+    if (!rows.length) break;
+    for (const row of rows) {
+      // eslint-disable-next-line no-await-in-loop
+      const real = await sageHasRealMember(row);
+      if (!real) toRemove.push(row._id);
+    }
+    skip += rows.length;
+    if (rows.length < 100) break;
+  }
+  for (const id of toRemove) {
+    // eslint-disable-next-line no-await-in-loop
+    await db.collection('sages').doc(String(id)).remove();
+  }
+  const seeded = await seedSagesFromZanyingyin();
+  return {
+    success: true,
+    message: `已清除臆造乡贤 ${toRemove.length} 条，补种 ${seeded} 条`,
+    data: { removed: toRemove.length, seeded }
+  };
+}
+
 // 乡贤列表：以云库 sages 为准；空库时从簪缨引种子导入
 async function seedSagesFromZanyingyin() {
   await ensureCollection('sages');
@@ -1336,6 +1405,9 @@ async function listSages(params) {
   if (total === 0) {
     await seedSagesFromZanyingyin();
     total = await safeCollectionCount('sages');
+  } else if (params && params.purgeFabricated) {
+    await purgeFabricatedSages();
+    total = await safeCollectionCount('sages');
   }
 
   const where = {};
@@ -1371,7 +1443,9 @@ async function listSages(params) {
   }
 
   const hydrated = await hydrateHonorList(data);
-  const list = hydrated.map(item => ({
+  // 仅展示已解析到 members 真人的乡贤
+  const linked = hydrated.filter(item => !!item.linkedMember);
+  const list = linked.map(item => ({
     _id: item._id,
     name: item.name,
     generation: item.generation,
@@ -1390,7 +1464,7 @@ async function listSages(params) {
   return {
     success: true,
     data: list,
-    total,
+    total: linked.length,
     page: pageNum,
     pageSize: size,
     intro: SAGES_INTRO
@@ -1767,10 +1841,11 @@ async function migrateHonorMemberLinks() {
     }
   }
 
+  const purge = await purgeFabricatedSages();
   return {
     success: true,
     message: '荣誉榜族人关联迁移完成',
-    data: stats
+    data: Object.assign({}, stats, { purgeSages: purge.data || purge })
   };
 }
 
@@ -1950,6 +2025,46 @@ async function getFamilyTree(params) {
   }
 
   const members = (await fetchAllMembers({ branch })).map(clanifyMemberRow);
+
+  // 附带脏 branch（纯数字）父辈，与 localDb 对齐，避免世系图误标断代
+  const byKey = new Map();
+  members.forEach((m) => {
+    if (m && m._id) byKey.set(String(m._id), m);
+    if (m && m.originalId != null) byKey.set(String(m.originalId), m);
+    if (m && m.memberId) byKey.set(String(m.memberId), m);
+  });
+  const missingFatherKeys = [];
+  members.forEach((m) => {
+    if (!m || m.fatherId == null || m.fatherId === '') return;
+    const key = String(m.fatherId);
+    if (byKey.has(key)) return;
+    missingFatherKeys.push(key);
+  });
+  const uniqMissing = [...new Set(missingFatherKeys)].slice(0, 200);
+  for (const key of uniqMissing) {
+    try {
+      const tries = [{ originalId: key }, { memberId: key }];
+      if (/^\d+$/.test(key)) tries.unshift({ originalId: Number(key) });
+      let father = null;
+      for (const where of tries) {
+        const { data } = await db.collection('members').where(where).limit(1).get();
+        if (data && data[0]) {
+          father = data[0];
+          break;
+        }
+      }
+      if (!father) continue;
+      const fb = String(father.branch || '');
+      if (fb === branch) continue;
+      if (!/^\d+$/.test(fb)) continue;
+      const row = clanifyMemberRow(father);
+      members.push(row);
+      if (row._id) byKey.set(String(row._id), row);
+      if (row.originalId != null) byKey.set(String(row.originalId), row);
+      if (row.memberId) byKey.set(String(row.memberId), row);
+    } catch (_) { /* ignore */ }
+  }
+
   return {
     success: true,
     data: { mode: 'chart', branch, members, total: members.length }

@@ -1,16 +1,21 @@
 <!--pages/sages/sages.wxml-->
 <view class="container">
-  <view class="header">
-    <view class="header-title">📜 簪缨引</view>
-    <view class="header-sub">衣冠仕宦 · 历代簪缨</view>
-    <view class="dynasty-tabs">
-      <view
-        wx:for="{{dynasties}}"
-        wx:key="*this"
-        class="dynasty-tab {{currentDynasty === item ? 'active' : ''}}"
-        data-dynasty="{{item}}"
-        bindtap="switchDynasty"
-      >{{item}}</view>
+  <scenic-nav title="簪缨引" scene="sages" showBack="{{true}}"></scenic-nav>
+  <view class="header scenic-header scenic-header--compact">
+    <image class="scenic-header__bg" src="/images/headers/sages.jpg" mode="aspectFill" />
+    <view class="scenic-header__mask"></view>
+    <view class="scenic-header__body">
+      <view class="header-title">簪缨引</view>
+      <view class="header-sub">衣冠仕宦 · 历代簪缨</view>
+      <view class="dynasty-tabs">
+        <view
+          wx:for="{{dynasties}}"
+          wx:key="*this"
+          class="dynasty-tab {{currentDynasty === item ? 'active' : ''}}"
+          data-dynasty="{{item}}"
+          bindtap="switchDynasty"
+        >{{item}}</view>
+      </view>
     </view>
   </view>
 
@@ -54,7 +59,7 @@
     </view>
     <view class="nav-item" bindtap="goToHonor">
       <view class="nav-icon">🏆</view>
-      <text class="nav-text">荣誉榜</text>
+      <text class="nav-text">牌坊</text>
     </view>
   </view>
 </view>

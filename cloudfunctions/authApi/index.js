@@ -4,8 +4,12 @@
  */
 const cloud = require('wx-server-sdk');
 const { withClanSurname } = require('./clanName');
+const { isModernMember } = require('./memberEra');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+
+const ANCIENT_LOCKED_MSG =
+  '古人族谱资料已锁死，不可用于身份验证。仅今人（民国元年1912年起）可验证入谱。';
 
 const db = cloud.database();
 const _ = db.command;
@@ -268,11 +272,19 @@ async function verifyName(params) {
   }
 
   const res = await db.collection(COL_MEMBERS).where({ name }).limit(100).get();
-  const matches = res.data || [];
+  const allMatches = res.data || [];
 
-  if (!matches.length) {
+  if (!allMatches.length) {
     return fail('未找到您的族谱信息。请确认全名是否正确（须含「罗」姓）。', {
       code: 'NOT_FOUND',
+      canAppeal: true
+    });
+  }
+
+  const matches = allMatches.filter(isModernMember);
+  if (!matches.length) {
+    return fail(ANCIENT_LOCKED_MSG, {
+      code: 'ANCIENT_LOCKED',
       canAppeal: true
     });
   }
@@ -306,7 +318,10 @@ async function verifyBirthday(params) {
   const day = Number(params.day);
   if (!year || !month || !day) return fail('请选择完整农历出生日期');
 
-  const members = await loadMembersByIds(ticket.candidatePersonIds || []);
+  const members = (await loadMembersByIds(ticket.candidatePersonIds || [])).filter(isModernMember);
+  if (!members.length) {
+    return fail(ANCIENT_LOCKED_MSG, { code: 'ANCIENT_LOCKED', canAppeal: true });
+  }
   const withoutBirth = members.filter(m => !hasFullLunarBirth(m));
   const matched = members.filter(m => matchLunarBirth(m, year, month, day));
 
@@ -350,7 +365,10 @@ async function verifyFather(params) {
     });
   }
 
-  const members = await loadMembersByIds(ticket.candidatePersonIds || []);
+  const members = (await loadMembersByIds(ticket.candidatePersonIds || [])).filter(isModernMember);
+  if (!members.length) {
+    return fail(ANCIENT_LOCKED_MSG, { code: 'ANCIENT_LOCKED', canAppeal: true });
+  }
   const matched = [];
   for (const m of members) {
     const resolved = await resolveFatherName(m);
@@ -373,6 +391,9 @@ async function verifyFather(params) {
   }
 
   const person = matched[0];
+  if (!isModernMember(person)) {
+    return fail(ANCIENT_LOCKED_MSG, { code: 'ANCIENT_LOCKED', canAppeal: true });
+  }
   const bound = await db.collection(COL_ACCOUNTS)
     .where({ personId: person._id })
     .limit(1)
@@ -460,6 +481,9 @@ async function bindPhone(params) {
   const memberRes = await db.collection(COL_MEMBERS).doc(personId).get().catch(() => null);
   const member = memberRes && memberRes.data;
   if (!member) return fail('族谱成员不存在');
+  if (!isModernMember(member)) {
+    return fail(ANCIENT_LOCKED_MSG, { code: 'ANCIENT_LOCKED', canAppeal: true });
+  }
 
   const addRes = await db.collection(COL_ACCOUNTS).add({
     data: {

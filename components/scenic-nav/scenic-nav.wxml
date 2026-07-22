@@ -1,0 +1,10 @@
+<view class="scenic-nav" style="padding-top: {{statusBarHeight}}px;">
+  <image class="scenic-nav__bg" src="{{bgSrc}}" mode="aspectFill" />
+  <view class="scenic-nav__mask"></view>
+  <view class="scenic-nav__bar" style="height: {{navBarHeight}}px;">
+    <view wx:if="{{showBack}}" class="scenic-nav__back" bindtap="onBack">‹</view>
+    <view wx:else class="scenic-nav__back-placeholder"></view>
+    <text class="scenic-nav__title">{{title}}</text>
+    <view class="scenic-nav__back-placeholder"></view>
+  </view>
+</view>

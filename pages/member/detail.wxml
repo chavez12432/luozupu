@@ -20,13 +20,17 @@
       <view wx:if="{{permission.canAddChild}}" class="manage-btn" bindtap="goAddChild">添加子女</view>
       <view wx:if="{{permission.canAddSpouse}}" class="manage-btn" bindtap="goAddSpouse">添加配偶</view>
       <view wx:if="{{permission.canDelete}}" class="manage-btn danger" bindtap="confirmDelete">删除</view>
+      <view
+        wx:if="{{permission.relation === 'self' && permission.addFamilyLimit}}"
+        class="manage-quota"
+      >已新增 {{permission.addFamilyUsed || 0}}/{{permission.addFamilyLimit}}</view>
     </view>
 
     <!-- ========== 古代人详情 · 册档风 ========== -->
     <block wx:if="{{!member.isModern}}">
       <view class="ag-page">
         <view class="ag-hero">
-          <view class="ag-seal">{{member.name[0]}}</view>
+          <view class="ag-seal">{{nameInitial || '族'}}</view>
           <view class="ag-hero-meta">
             <text class="ag-era">家族档案 · 古人</text>
             <text class="ag-name">{{member.name}}</text>
@@ -348,7 +352,7 @@
             <view class="md-portrait" bindtap="choosePhoto">
               <image wx:if="{{member.photo}}" class="md-portrait-img" src="{{member.photo}}" mode="aspectFill" />
               <view wx:else class="md-portrait-empty">
-                <text class="md-portrait-seal">{{member.name[0]}}</text>
+                <text class="md-portrait-seal">{{nameInitial || '族'}}</text>
                 <text class="md-portrait-tip">{{permission.canEdit ? '点此上传' : '暂无相片'}}</text>
               </view>
               <view class="md-portrait-frame"></view>

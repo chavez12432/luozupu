@@ -6,9 +6,9 @@
 }
 
 .header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 30rpx;
+  /* 八景淡化图由 scenic-header 提供 */
+  background: #9B1515;
 }
 
 .header-title {
@@ -16,13 +16,15 @@
   font-weight: bold;
   text-align: center;
   margin-bottom: 8rpx;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.35);
 }
 
 .header-sub {
   font-size: 22rpx;
   text-align: center;
-  opacity: 0.85;
+  opacity: 0.92;
   margin-bottom: 20rpx;
+  text-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
 }
 
 .dynasty-tabs {

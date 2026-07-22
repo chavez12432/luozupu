@@ -55,78 +55,7 @@ const ZANYINGYIN_SAGES = [
     achievements: '庆典迪功郎。',
     memberDocId: 'M0012'
   },
-  {
-    id: 'zyy-shiju',
-    name: '罗世举',
-    generation: 8,
-    dynasty: '宋',
-    achievements: '敕赐楚州文学。',
-    memberDocId: null
-  },
-  {
-    id: 'zyy-shibeng',
-    name: '罗世伻',
-    generation: 8,
-    dynasty: '宋',
-    achievements: '奏授将仕郎、永州佥判。',
-    memberDocId: null
-  },
-  {
-    id: 'zyy-jingfu',
-    name: '罗敬夫',
-    generation: 9,
-    dynasty: '宋',
-    achievements: '授文林郎，判建康都税院，兼淮西江东总领军马钱粮事。',
-    memberDocId: null
-  },
-  {
-    id: 'zyy-renfu',
-    name: '罗仁夫',
-    generation: 9,
-    dynasty: '宋',
-    achievements: '授迪功郎，寻州桂平簿尉。',
-    memberDocId: null
-  },
-  {
-    id: 'zyy-jin',
-    name: '罗晋',
-    generation: 10,
-    dynasty: '宋',
-    achievements: '授登仕郎。',
-    memberDocId: null
-  },
-  {
-    id: 'zyy-xun',
-    name: '罗巽',
-    generation: 10,
-    dynasty: '宋',
-    achievements: '授迪功郎。',
-    memberDocId: null
-  },
-  {
-    id: 'zyy-maojv',
-    name: '罗懋举',
-    generation: 13,
-    dynasty: '元',
-    achievements: '任黄州学正。',
-    memberDocId: null
-  },
-  {
-    id: 'zyy-zhongxian',
-    name: '罗仲显',
-    generation: 15,
-    dynasty: '明',
-    achievements: '任湖口县训导。',
-    memberDocId: null
-  },
-  {
-    id: 'zyy-wuren',
-    name: '罗吾仁',
-    generation: 15,
-    dynasty: '明',
-    achievements: '授知县，未赴任卒。',
-    memberDocId: null
-  },
+
   {
     id: 'zyy-ming',
     name: '罗明',
@@ -143,30 +72,7 @@ const ZANYINGYIN_SAGES = [
     achievements: '勅南京山东道监察御史，陞福建按察佥事、云南副使。',
     memberDocId: 'M0036'
   },
-  {
-    id: 'zyy-jianshan',
-    name: '罗兼善',
-    generation: 17,
-    dynasty: '明',
-    achievements: '任河南解、汝、化三州学正。',
-    memberDocId: null
-  },
-  {
-    id: 'zyy-jun',
-    name: '罗俊',
-    generation: 17,
-    dynasty: '明',
-    achievements: '任河南府永宁县，改任泉州府永春县司训。',
-    memberDocId: null
-  },
-  {
-    id: 'zyy-ren17',
-    name: '罗仁',
-    generation: 17,
-    dynasty: '明',
-    achievements: '任广西桂林府通判。',
-    memberDocId: null
-  },
+
   {
     id: 'zyy-riqian',
     name: '罗日谦',
@@ -183,22 +89,7 @@ const ZANYINGYIN_SAGES = [
     achievements: '任福建水师营守备。',
     memberDocId: 'M0039'
   },
-  {
-    id: 'zyy-guang',
-    name: '罗光',
-    generation: 19,
-    dynasty: '明',
-    achievements: '任四川成都府新繁县主簿。',
-    memberDocId: null
-  },
-  {
-    id: 'zyy-xin',
-    name: '罗新',
-    generation: 26,
-    dynasty: '清',
-    achievements: '赠儒林郎。',
-    memberDocId: null
-  },
+
   {
     id: 'zyy-chaogan',
     name: '罗朝干',
@@ -223,22 +114,7 @@ const ZANYINGYIN_SAGES = [
     achievements: '饮宾，徵仕郎。',
     memberDocId: 'M1062'
   },
-  {
-    id: 'zyy-dazhong',
-    name: '罗大忠',
-    generation: 29,
-    dynasty: '清',
-    achievements: '登仕郎。',
-    memberDocId: null
-  },
-  {
-    id: 'zyy-dahong',
-    name: '罗大鸿',
-    generation: 29,
-    dynasty: '清',
-    achievements: '登仕郎。',
-    memberDocId: null
-  },
+
   {
     id: 'zyy-hongwei',
     name: '罗宏位',
@@ -246,14 +122,6 @@ const ZANYINGYIN_SAGES = [
     dynasty: '清',
     achievements: '钦赐徵仕郎。',
     memberDocId: 'M0282'
-  },
-  {
-    id: 'zyy-zhi',
-    name: '罗智',
-    generation: 30,
-    dynasty: '清',
-    achievements: '登仕郎。',
-    memberDocId: null
   },
 
   // —— 近现代：公职事迹（学历已分至学历榜）——
@@ -345,51 +213,7 @@ const ZANYINGYIN_SAGES = [
  */
 const ZANYINGYIN_EDUCATION = [
   // 仅功名，不入乡贤
-  {
-    name: '罗敬夫',
-    generation: 9,
-    bucket: 'imperial',
-    titles: ['进士'],
-    titleDetail: '嘉定辛未进士',
-    memberDocId: null,
-    dynastyEra: '宋'
-  },
-  {
-    name: '罗懋举',
-    generation: 13,
-    bucket: 'imperial',
-    titles: ['进士'],
-    titleDetail: '进士',
-    memberDocId: null,
-    dynastyEra: '元'
-  },
-  {
-    name: '罗兼善',
-    generation: 17,
-    bucket: 'imperial',
-    titles: ['举人'],
-    titleDetail: '宣德壬子科举人',
-    memberDocId: null,
-    dynastyEra: '明'
-  },
-  {
-    name: '罗俊',
-    generation: 17,
-    bucket: 'imperial',
-    titles: ['贡生'],
-    titleDetail: '贡举',
-    memberDocId: null,
-    dynastyEra: '明'
-  },
-  {
-    name: '罗仁',
-    generation: 17,
-    bucket: 'imperial',
-    titles: ['贡生'],
-    titleDetail: '贡举',
-    memberDocId: null,
-    dynastyEra: '明'
-  },
+
   {
     name: '罗日谦',
     generation: 18,

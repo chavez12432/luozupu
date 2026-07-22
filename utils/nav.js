@@ -1,5 +1,6 @@
 /**
  * 底部导航公共跳转
+ * 枢纽页统一 reLaunch，避免 navigateTo 堆栈触达 10 页上限
  */
 const authService = require('./authService');
 const authGuard = require('./authGuard');
@@ -19,17 +20,17 @@ function goToIndex() {
 }
 
 function goToPreface() {
-  wx.navigateTo({ url: '/pages/preface/list' });
+  wx.reLaunch({ url: '/pages/preface/list' });
 }
 
 function goToHonor() {
   if (!authGuard.requireAuth()) return;
-  wx.navigateTo({ url: '/pages/honor/index' });
+  wx.reLaunch({ url: '/pages/honor/index' });
 }
 
 function goToHall() {
   if (!authGuard.requireAuth()) return;
-  wx.navigateTo({ url: '/pages/family-tree/family-tree' });
+  wx.reLaunch({ url: '/pages/family-tree/family-tree' });
 }
 
 module.exports = {

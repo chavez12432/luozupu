@@ -1,10 +1,11 @@
 {
-  "navigationBarTitleText": "高洲罗氏家谱",
+  "navigationStyle": "custom",
   "usingComponents": {
-    "logo-header": "/components/logo-header/logo-header",
-    "seal-button": "/components/seal-button/seal-button",
-    "ancient-border": "/components/ancient-border/ancient-border",
     "clan-tabbar": "/components/clan-tabbar/clan-tabbar",
+    "logo-header": "/components/logo-header/logo-header",
+    "scenic-nav": "/components/scenic-nav/scenic-nav",
+    "ancient-border": "/components/ancient-border/ancient-border",
+    "seal-button": "/components/seal-button/seal-button",
     "person-card": "/components/person-card/person-card"
   }
 }

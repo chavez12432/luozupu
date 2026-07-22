@@ -5,11 +5,12 @@
   background-image:
     radial-gradient(ellipse at 20% 0%, rgba(193, 154, 75, 0.08), transparent 55%),
     radial-gradient(ellipse at 80% 100%, rgba(196, 30, 30, 0.05), transparent 50%);
-  padding: 48rpx 40rpx 80rpx;
+  padding: 0 0 80rpx;
   box-sizing: border-box;
 }
 
 .auth-card {
+  margin: 24rpx 40rpx 0;
   background: #FFF9F0;
   border-radius: 20rpx;
   padding: 40rpx 36rpx;

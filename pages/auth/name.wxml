@@ -1,4 +1,5 @@
 <view class="auth-page">
+  <scenic-nav title="姓名验证" scene="auth" showBack="{{true}}"></scenic-nav>
   <view class="auth-card">
     <view class="auth-title">姓名验证</view>
     <view class="auth-desc">

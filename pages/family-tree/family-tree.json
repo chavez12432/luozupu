@@ -1,7 +1,8 @@
 {
-  "navigationBarTitleText": "家族谱树",
-  "disableScroll": true,
+  "navigationStyle": "custom",
   "usingComponents": {
-    "clan-tabbar": "/components/clan-tabbar/clan-tabbar"
-  }
+    "clan-tabbar": "/components/clan-tabbar/clan-tabbar",
+    "scenic-nav": "/components/scenic-nav/scenic-nav"
+  },
+  "disableScroll": true
 }

@@ -11,9 +11,8 @@
 
 .header {
   flex-shrink: 0;
-  background: linear-gradient(165deg, #C41E1E 0%, #9B1515 100%);
+  background: #9B1515;
   color: #fff;
-  padding: 36rpx 30rpx 40rpx;
   text-align: center;
 }
 
@@ -30,13 +29,15 @@
   font-size: 40rpx;
   font-weight: 700;
   letter-spacing: 6rpx;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.35);
 }
 
 .header-sub {
   margin-top: 10rpx;
   font-size: 24rpx;
-  opacity: 0.9;
+  opacity: 0.92;
   letter-spacing: 3rpx;
+  text-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
 }
 
 .hub-body {

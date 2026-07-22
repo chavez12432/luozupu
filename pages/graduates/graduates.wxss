@@ -6,21 +6,21 @@
 }
 
 .header {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   color: white;
-  padding: 30rpx;
-  text-align: center;
+  background: #9B1515;
 }
 
 .header-title {
   font-size: 36rpx;
   font-weight: bold;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.35);
 }
 
 .header-sub {
   font-size: 24rpx;
   margin-top: 8rpx;
-  opacity: 0.85;
+  opacity: 0.92;
+  text-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
 }
 
 .type-tabs {

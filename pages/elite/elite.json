@@ -1,3 +1,7 @@
 {
-  "usingComponents": {}
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "scenic-nav": "/components/scenic-nav/scenic-nav",
+    "clan-tabbar": "/components/clan-tabbar/clan-tabbar"
+  }
 }

@@ -1,8 +1,13 @@
 <!--pages/patriarchs/patriarchs.wxml-->
 <view class="container">
-  <view class="header">
-    <view class="header-title">👑 族长表</view>
-    <view class="header-sub">各堂基祖</view>
+  <scenic-nav title="族长表" scene="patriarchs" showBack="{{true}}"></scenic-nav>
+  <view class="header scenic-header scenic-header--compact">
+    <image class="scenic-header__bg" src="/images/headers/patriarchs.jpg" mode="aspectFill" />
+    <view class="scenic-header__mask"></view>
+    <view class="scenic-header__body">
+      <view class="header-title">族长表</view>
+      <view class="header-sub">各堂基祖</view>
+    </view>
   </view>
 
   <view class="content">
@@ -40,7 +45,7 @@
     </view>
     <view class="nav-item" bindtap="goToHonor">
       <view class="nav-icon">🏆</view>
-      <text class="nav-text">荣誉榜</text>
+      <text class="nav-text">牌坊</text>
     </view>
   </view>
 </view>

@@ -8,8 +8,8 @@
     <text class="tab-text">序文</text>
   </view>
   <view class="tab-item {{active === 'honor' ? 'active' : ''}}" data-key="honor" bindtap="onTap">
-    <view class="tab-seal">誉</view>
-    <text class="tab-text">荣誉</text>
+    <view class="tab-seal">坊</view>
+    <text class="tab-text">牌坊</text>
   </view>
   <view class="tab-item {{active === 'tree' ? 'active' : ''}}" data-key="tree" bindtap="onTap">
     <view class="tab-seal">谱</view>

@@ -45,6 +45,7 @@ const indexes = {
 };
 
 let sortedMembers = [];
+let beiweiIndex = null;
 let initialized = false;
 let wivesLoaded = false;
 let membersLoadPromise = null;
@@ -156,6 +157,15 @@ function buildMemberIndexes() {
   });
 
   sortedMembers = sortMembers(store.members);
+  beiweiIndex = null;
+}
+
+function getBeiweiIndex() {
+  if (!beiweiIndex) {
+    const { buildBeiweiIndex } = require('./nameInitial');
+    beiweiIndex = buildBeiweiIndex(store.members);
+  }
+  return beiweiIndex;
 }
 
 function buildWivesIndex() {
@@ -311,6 +321,18 @@ function addMemberLocal(memberData) {
 function deleteMemberLocal(memberId) {
   const idx = store.members.findIndex(m => m._id === memberId);
   if (idx < 0) return { success: false, message: '成员不存在' };
+  const target = store.members[idx];
+  const tKeys = new Set(
+    [target._id, target.originalId, target.memberId]
+      .filter((v) => v != null && String(v) !== '')
+      .map(String)
+  );
+  store.members.forEach((m) => {
+    if (!m || m._id === memberId) return;
+    if (m.spouseId != null && tKeys.has(String(m.spouseId))) {
+      m.spouseId = '';
+    }
+  });
   store.members.splice(idx, 1);
   const patches = readMemberPatches();
   patches.deleted = patches.deleted || [];
@@ -322,13 +344,9 @@ function deleteMemberLocal(memberId) {
   return { success: true };
 }
 
-function nextLocalOriginalId() {
-  let max = 0;
-  store.members.forEach(m => {
-    const n = Number(m.originalId);
-    if (!isNaN(n) && n > max) max = n;
-  });
-  return max + 1;
+function nextLocalOriginalId(branch) {
+  const { nextIdsForBranch } = require('./memberIdAssign');
+  return nextIdsForBranch(store.members || [], branch || '').originalId;
 }
 
 function loadLocalDataPackage() {
@@ -417,8 +435,14 @@ function getCollection(name) {
 }
 
 function findById(collectionName, id) {
-  if (collectionName === 'members') return indexes.byId[id] || null;
-  return getCollection(collectionName).find(item => item._id === id) || null;
+  if (id == null || id === '') return null;
+  const key = String(id);
+  if (collectionName === 'members') {
+    return indexes.byId[key]
+      || indexes.byOriginalId[key]
+      || null;
+  }
+  return getCollection(collectionName).find(item => item._id === key) || null;
 }
 
 function findMemberByOriginalId(originalId) {
@@ -513,6 +537,17 @@ function toListItem(member) {
 
   if (member.birthDate && member.birthDate.lunar && member.birthDate.lunar.year) {
     item.birthYear = member.birthDate.lunar.year;
+  }
+
+  try {
+    const { displayNameChar } = require('./nameInitial');
+    item.displayInitial = displayNameChar(member.name, {
+      generation: member.generation,
+      branch: member.branch,
+      index: getBeiweiIndex()
+    });
+  } catch (_) {
+    item.displayInitial = '';
   }
 
   return item;

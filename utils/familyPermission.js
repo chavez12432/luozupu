@@ -56,12 +56,17 @@ function resolveRelation(viewer, target) {
  * @param {object} opts.viewerMember
  * @param {object} opts.targetMember
  * @param {boolean} opts.targetVerified 目标是否已绑定账号
- * @returns {{ relation, canEdit, canDelete, canAddChild, canAddSpouse, locked, lockReason }}
+ * @returns {{ relation, canEdit, canDelete, canAddChild, canAddSpouse, locked, lockReason, addFamilyUsed, addFamilyLimit, addFamilyRemaining }}
  */
+const MAX_ADD_FAMILY = 10;
+
 function evaluatePermission(opts) {
   const viewer = opts.viewerMember;
   const target = opts.targetMember;
   const targetVerified = !!opts.targetVerified;
+  const used = Number(opts.addFamilyUsed) || 0;
+  const remaining = Math.max(0, MAX_ADD_FAMILY - used);
+  const quotaOk = remaining > 0;
   const relation = resolveRelation(viewer, target);
 
   const empty = {
@@ -71,7 +76,10 @@ function evaluatePermission(opts) {
     canAddChild: false,
     canAddSpouse: false,
     locked: false,
-    lockReason: ''
+    lockReason: '',
+    addFamilyUsed: used,
+    addFamilyLimit: MAX_ADD_FAMILY,
+    addFamilyRemaining: remaining
   };
 
   if (!viewer || !target) return empty;
@@ -93,10 +101,13 @@ function evaluatePermission(opts) {
       relation,
       canEdit: true,
       canDelete: false,
-      canAddChild: true,
-      canAddSpouse: true,
+      canAddChild: quotaOk,
+      canAddSpouse: quotaOk,
       locked: false,
-      lockReason: ''
+      lockReason: quotaOk ? '' : `每人最多新增 ${MAX_ADD_FAMILY} 位族人资料，已达上限`,
+      addFamilyUsed: used,
+      addFamilyLimit: MAX_ADD_FAMILY,
+      addFamilyRemaining: remaining
     };
   }
 
@@ -111,7 +122,10 @@ function evaluatePermission(opts) {
     canAddChild: false,
     canAddSpouse: false,
     locked: false,
-    lockReason: ''
+    lockReason: '',
+    addFamilyUsed: used,
+    addFamilyLimit: MAX_ADD_FAMILY,
+    addFamilyRemaining: remaining
   };
 }
 
@@ -257,6 +271,7 @@ module.exports = {
   evaluatePermission,
   EDITABLE_FIELDS,
   MAX_MULTI,
+  MAX_ADD_FAMILY,
   pickEditable,
   memberKey,
   oid

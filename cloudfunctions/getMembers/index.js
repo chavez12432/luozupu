@@ -1,5 +1,6 @@
 // 云函数入口文件
 const cloud = require('wx-server-sdk');
+const { buildBeiweiIndex, displayNameChar } = require('./nameInitial');
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
@@ -16,6 +17,36 @@ const BRANCH_CODE_MAP = {
 };
 
 const DEFAULT_PAGE_SIZE = 30;
+
+/** 辈分字索引缓存（冷启动内复用） */
+let cachedBeiweiIndex = null;
+let cachedBeiweiAt = 0;
+const BEIWEI_TTL_MS = 10 * 60 * 1000;
+
+async function loadBeiweiIndex() {
+  const now = Date.now();
+  if (cachedBeiweiIndex && now - cachedBeiweiAt < BEIWEI_TTL_MS) {
+    return cachedBeiweiIndex;
+  }
+  // 仅拉姓名+世系+堂份，用于表决辈字位置
+  const names = [];
+  const pageSize = 100;
+  let skip = 0;
+  for (;;) {
+    const { data } = await db.collection('members')
+      .field({ name: true, generation: true, branch: true })
+      .skip(skip)
+      .limit(pageSize)
+      .get();
+    if (!data.length) break;
+    names.push(...data);
+    if (data.length < pageSize || names.length >= 5000) break;
+    skip += pageSize;
+  }
+  cachedBeiweiIndex = buildBeiweiIndex(names);
+  cachedBeiweiAt = now;
+  return cachedBeiweiIndex;
+}
 
 async function fetchAllMembers(whereCondition) {
   const MAX_LIMIT = 100;
@@ -49,7 +80,7 @@ function buildFatherMap(members, fatherRecords) {
   return map;
 }
 
-function toListItem(member, fatherMap) {
+function toListItem(member, fatherMap, beiweiIndex) {
   const item = {
     _id: member._id,
     name: member.name,
@@ -68,6 +99,12 @@ function toListItem(member, fatherMap) {
   if (member.birthDate && member.birthDate.lunar && member.birthDate.lunar.year) {
     item.birthYear = member.birthDate.lunar.year;
   }
+
+  item.displayInitial = displayNameChar(member.name, {
+    generation: member.generation,
+    branch: member.branch,
+    index: beiweiIndex
+  });
 
   return item;
 }
@@ -109,7 +146,8 @@ exports.main = async (event) => {
       fatherMap = buildFatherMap(allData, fathersByOriginal.concat(fathersByMemberId));
     }
 
-    const enrichedData = allData.map(member => toListItem(member, fatherMap));
+    const beiweiIndex = await loadBeiweiIndex().catch(() => null);
+    const enrichedData = allData.map(member => toListItem(member, fatherMap, beiweiIndex));
 
     if (getAll) {
       return { success: true, data: enrichedData, total };

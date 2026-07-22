@@ -3,6 +3,7 @@
  * actions: getPermission | updateMember | deleteMember | addFamily
  */
 const cloud = require('wx-server-sdk');
+const { nextIdsForBranchFromDb } = require('./memberIdAssign');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -18,6 +19,8 @@ const EDITABLE_FIELDS = [
 ];
 
 const MAX_MULTI = 5;
+/** 每位认证用户最多新增的族人条数（子女+配偶合计） */
+const MAX_ADD_FAMILY = 10;
 
 function ok(data = {}) {
   return Object.assign({ success: true }, data);
@@ -55,8 +58,11 @@ function resolveRelation(viewer, target) {
   return 'none';
 }
 
-function evaluatePermission(viewer, target, targetVerified) {
+function evaluatePermission(viewer, target, targetVerified, addFamilyUsed = 0) {
   const relation = resolveRelation(viewer, target);
+  const used = Number(addFamilyUsed) || 0;
+  const remaining = Math.max(0, MAX_ADD_FAMILY - used);
+  const quotaOk = remaining > 0;
   const empty = {
     relation,
     canEdit: false,
@@ -64,7 +70,10 @@ function evaluatePermission(viewer, target, targetVerified) {
     canAddChild: false,
     canAddSpouse: false,
     locked: false,
-    lockReason: ''
+    lockReason: '',
+    addFamilyUsed: used,
+    addFamilyLimit: MAX_ADD_FAMILY,
+    addFamilyRemaining: remaining
   };
   if (!viewer || !target) return empty;
 
@@ -82,10 +91,13 @@ function evaluatePermission(viewer, target, targetVerified) {
       relation,
       canEdit: true,
       canDelete: false,
-      canAddChild: true,
-      canAddSpouse: true,
+      canAddChild: quotaOk,
+      canAddSpouse: quotaOk,
       locked: false,
-      lockReason: ''
+      lockReason: quotaOk ? '' : `每人最多新增 ${MAX_ADD_FAMILY} 位族人资料，已达上限`,
+      addFamilyUsed: used,
+      addFamilyLimit: MAX_ADD_FAMILY,
+      addFamilyRemaining: remaining
     };
   }
 
@@ -96,8 +108,48 @@ function evaluatePermission(viewer, target, targetVerified) {
     canAddChild: false,
     canAddSpouse: false,
     locked: false,
-    lockReason: ''
+    lockReason: '',
+    addFamilyUsed: used,
+    addFamilyLimit: MAX_ADD_FAMILY,
+    addFamilyRemaining: remaining
   };
+}
+
+async function countCreatedByViewer(viewer) {
+  if (!viewer) return 0;
+  const keys = [
+    viewer._id,
+    memberKey(viewer),
+    viewer.originalId,
+    viewer.memberId
+  ]
+    .filter((v) => v != null && String(v) !== '')
+    .map(String);
+  const uniq = [...new Set(keys)];
+  if (!uniq.length) return 0;
+
+  const orConds = [];
+  uniq.forEach((key) => {
+    orConds.push({ createdByPersonId: key });
+    orConds.push({ createdByKey: key });
+  });
+
+  const seen = new Set();
+  try {
+    const res = await db
+      .collection(COL_MEMBERS)
+      .where(_.or(orConds))
+      .field({ _id: true })
+      .limit(100)
+      .get();
+    (res.data || []).forEach((row) => {
+      const id = row && row._id != null ? String(row._id) : '';
+      if (id) seen.add(id);
+    });
+  } catch (_) {
+    return 0;
+  }
+  return seen.size;
 }
 
 function normalizeMultiList(list, mapFn) {
@@ -274,8 +326,9 @@ async function getPermission(params) {
   const target = await getMember(params.targetId);
   if (!target) return fail('成员不存在');
   const targetVerified = await isPersonVerified(target);
+  const addFamilyUsed = await countCreatedByViewer(ctx.viewer);
   return ok({
-    permission: evaluatePermission(ctx.viewer, target, targetVerified),
+    permission: evaluatePermission(ctx.viewer, target, targetVerified, addFamilyUsed),
     viewerId: ctx.viewer._id,
     targetId: target._id
   });
@@ -316,26 +369,54 @@ async function deleteMember(params) {
   if (!perm.canDelete) {
     return fail(perm.lockReason || '无权删除该成员（仅可删除未认证的配偶或子女）');
   }
+
+  // 清理反向配偶指针，避免悬空引用
+  const tKey = memberKey(target);
+  const spouseRef = target.spouseId != null ? String(target.spouseId) : '';
+  if (spouseRef) {
+    const spouse = await getMember(spouseRef);
+    if (spouse && spouse._id) {
+      const sKey = memberKey(spouse);
+      if (
+        oid(spouse.spouseId) === tKey ||
+        oid(spouse.spouseId) === oid(target._id) ||
+        oid(spouse.spouseId) === oid(target.originalId) ||
+        oid(spouse.spouseId) === oid(target.memberId) ||
+        (sKey && oid(target.spouseId) === sKey)
+      ) {
+        await db.collection(COL_MEMBERS).doc(String(spouse._id)).update({
+          data: { spouseId: '', updatedAt: db.serverDate() }
+        }).catch(() => {});
+      }
+    }
+  }
+  // 若本人是他人配偶：按业务键反查清对方
+  if (tKey) {
+    try {
+      const res = await db.collection(COL_MEMBERS)
+        .where({ spouseId: tKey })
+        .limit(20)
+        .get();
+      for (const row of res.data || []) {
+        if (row && row._id && String(row._id) !== String(target._id)) {
+          await db.collection(COL_MEMBERS).doc(String(row._id)).update({
+            data: { spouseId: '', updatedAt: db.serverDate() }
+          }).catch(() => {});
+        }
+      }
+    } catch (_) { /* ignore */ }
+  }
+
   await db.collection(COL_MEMBERS).doc(String(target._id)).remove();
   return ok();
-}
-
-async function nextOriginalId() {
-  const res = await db.collection(COL_MEMBERS)
-    .orderBy('originalId', 'desc')
-    .limit(1)
-    .get()
-    .catch(() => ({ data: [] }));
-  const top = res.data[0];
-  const n = top && top.originalId != null ? Number(top.originalId) : 0;
-  return (isNaN(n) ? 0 : n) + 1;
 }
 
 async function addFamily(params) {
   const ctx = await getViewerContext();
   if (ctx.error) return ctx.error;
   const viewer = ctx.viewer;
-  const selfPerm = evaluatePermission(viewer, viewer, true);
+  const addFamilyUsed = await countCreatedByViewer(viewer);
+  const selfPerm = evaluatePermission(viewer, viewer, true, addFamilyUsed);
   const relation = params.relation;
   const { withClanSurname } = require('./clanName');
   const rawName = String(params.name || '').trim();
@@ -344,11 +425,31 @@ async function addFamily(params) {
   const name = /氏/.test(rawName) ? rawName.replace(/^罗+/, '') : withClanSurname(rawName);
   if (!name) return fail('请填写姓名');
 
-  if (relation === 'child' && !selfPerm.canAddChild) return fail('无权添加子女');
-  if (relation === 'spouse' && !selfPerm.canAddSpouse) return fail('无权添加配偶');
+  if (relation === 'child' && !selfPerm.canAddChild) {
+    return fail(selfPerm.lockReason || '无权添加子女', { code: 'ADD_LIMIT' });
+  }
+  if (relation === 'spouse' && !selfPerm.canAddSpouse) {
+    return fail(selfPerm.lockReason || '无权添加配偶', { code: 'ADD_LIMIT' });
+  }
+  if (addFamilyUsed >= MAX_ADD_FAMILY) {
+    return fail(`每人最多新增 ${MAX_ADD_FAMILY} 位族人资料，已达上限`, {
+      code: 'ADD_LIMIT',
+      addFamilyUsed,
+      addFamilyLimit: MAX_ADD_FAMILY
+    });
+  }
 
-  const originalId = await nextOriginalId();
+  const branch = viewer.branch || '';
+  const ids = await nextIdsForBranchFromDb(db, branch, []);
+  const originalId = ids.originalId;
+  const memberId = ids.memberId;
   const vKey = memberKey(viewer);
+  const creatorMeta = {
+    createdByPersonId: viewer._id != null ? String(viewer._id) : '',
+    createdByKey: vKey,
+    createdByOpenId: ctx.openid || '',
+    eraCategory: 'modern'
+  };
   let memberData;
 
   if (relation === 'child') {
@@ -356,15 +457,16 @@ async function addFamily(params) {
       name,
       gender,
       generation: (viewer.generation || 0) + 1,
-      branch: viewer.branch || '',
+      branch,
       fatherId: vKey,
       fatherName: viewer.name,
       originalId,
-      memberId: `M${String(originalId).padStart(6, '0')}`,
+      memberId,
       birthDate: { lunar: {} },
       remark: '',
       phone: '',
       residence: '',
+      ...creatorMeta,
       createdAt: db.serverDate(),
       updatedAt: db.serverDate()
     };
@@ -373,15 +475,16 @@ async function addFamily(params) {
       name,
       gender,
       generation: viewer.generation || 0,
-      branch: viewer.branch || '',
+      branch,
       fatherId: '',
       spouseId: vKey,
       originalId,
-      memberId: `M${String(originalId).padStart(6, '0')}`,
+      memberId,
       birthDate: { lunar: {} },
       remark: '',
       phone: '',
       residence: '',
+      ...creatorMeta,
       createdAt: db.serverDate(),
       updatedAt: db.serverDate()
     };
@@ -396,7 +499,15 @@ async function addFamily(params) {
     });
   }
 
-  return ok({ data: { _id: addRes._id, originalId } });
+  return ok({
+    data: {
+      _id: addRes._id,
+      originalId,
+      memberId,
+      addFamilyUsed: addFamilyUsed + 1,
+      addFamilyLimit: MAX_ADD_FAMILY
+    }
+  });
 }
 
 exports.main = async (event) => {

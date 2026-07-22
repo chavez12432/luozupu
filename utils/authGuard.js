@@ -5,6 +5,8 @@ const authService = require('./authService');
 
 const PUBLIC_PREFIXES = [
   'pages/preface/',
+  'pages/songshou/',
+  'pages/fengtu/',
   'pages/auth/',
   'pages/message/'
 ];
@@ -23,6 +25,7 @@ function isPublicRoute(route) {
 
 /**
  * 未认证则跳转欢迎页。返回 true 表示已认证可继续。
+ * 若会话仍在恢复中，先短等再判定，减少冷启动误踢。
  * @param {object} [options]
  * @param {boolean} [options.replace] 使用 redirectTo
  */
@@ -32,6 +35,12 @@ function requireAuth(options = {}) {
   const route = getCurrentRoute();
   if (isPublicRoute(route)) return true;
 
+  // 同步门禁：尽量读缓存；异步恢复由 waitAuthReady 在启动时完成
+  try {
+    const cached = authService.getCachedAccount && authService.getCachedAccount();
+    if (cached && cached.personId) return true;
+  } catch (_) { /* ignore */ }
+
   const url = '/pages/auth/welcome';
   if (options.replace) {
     wx.redirectTo({ url });
@@ -39,6 +48,13 @@ function requireAuth(options = {}) {
     wx.navigateTo({ url });
   }
   return false;
+}
+
+async function requireAuthAsync(options = {}) {
+  try {
+    await authService.waitAuthReady();
+  } catch (_) { /* ignore */ }
+  return requireAuth(options);
 }
 
 /**
@@ -50,6 +66,7 @@ function checkVerified() {
 
 module.exports = {
   requireAuth,
+  requireAuthAsync,
   checkVerified,
   isPublicRoute,
   PUBLIC_PREFIXES

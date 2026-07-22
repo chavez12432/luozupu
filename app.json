@@ -17,6 +17,10 @@
     "pages/profile/index",
     "pages/preface/list",
     "pages/preface/detail",
+    "pages/songshou/list",
+    "pages/songshou/detail",
+    "pages/fengtu/list",
+    "pages/fengtu/detail",
     "pages/admin/dataImport",
     "pages/admin/syncToCloud",
     "pages/honor/index",
@@ -27,6 +31,29 @@
     "pages/elite/detail",
     "pages/graduates/graduates"
   ],
+  "subpackages": [
+    {
+      "root": "pkg-lib",
+      "name": "pkg-lib",
+      "pages": [
+        "pages/stub"
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/auth/birthday": {
+      "network": "all",
+      "packages": ["pkg-lib"]
+    },
+    "pages/member/edit": {
+      "network": "all",
+      "packages": ["pkg-lib"]
+    },
+    "pages/member/detail": {
+      "network": "all",
+      "packages": ["pkg-lib"]
+    }
+  },
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#C41E1E",

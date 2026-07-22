@@ -6,9 +6,12 @@
 }
 
 .header {
-  background: linear-gradient(165deg, #C41E1E 0%, #9B1515 100%);
+  /* 背景由 scenic-header + 八景淡化图提供 */
+  padding: 0;
+}
+
+.scenic-header {
   padding: 40rpx 30rpx;
-  text-align: center;
 }
 
 .title {
@@ -18,13 +21,15 @@
   color: #fff;
   margin-bottom: 10rpx;
   letter-spacing: 6rpx;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.35);
 }
 
 .subtitle {
   display: block;
   font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.92);
   letter-spacing: 2rpx;
+  text-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
 }
 
 .preface-list {

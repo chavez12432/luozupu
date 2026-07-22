@@ -1,18 +1,23 @@
 <!--pages/graduates/graduates.wxml-->
 <view class="container">
-  <view class="header">
-    <view class="header-title">🎓 学历榜</view>
-    <view class="header-sub">功名与学历</view>
-    <view class="type-tabs">
-      <view
-        wx:for="{{tabs}}"
-        wx:key="key"
-        class="type-tab {{currentTab === item.key ? 'active' : ''}}"
-        data-key="{{item.key}}"
-        bindtap="switchTab"
-      >
-        <text>{{item.label}}</text>
-        <text class="tab-count">{{item.count || 0}}</text>
+  <scenic-nav title="学历榜" scene="graduates" showBack="{{true}}"></scenic-nav>
+  <view class="header scenic-header scenic-header--compact">
+    <image class="scenic-header__bg" src="/images/headers/graduates.jpg" mode="aspectFill" />
+    <view class="scenic-header__mask"></view>
+    <view class="scenic-header__body">
+      <view class="header-title">学历榜</view>
+      <view class="header-sub">功名与学历</view>
+      <view class="type-tabs">
+        <view
+          wx:for="{{tabs}}"
+          wx:key="key"
+          class="type-tab {{currentTab === item.key ? 'active' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="switchTab"
+        >
+          <text>{{item.label}}</text>
+          <text class="tab-count">{{item.count || 0}}</text>
+        </view>
       </view>
     </view>
   </view>
@@ -76,7 +81,7 @@
     </view>
     <view class="nav-item" bindtap="goToHonor">
       <view class="nav-icon">🏆</view>
-      <text class="nav-text">荣誉榜</text>
+      <text class="nav-text">牌坊</text>
     </view>
   </view>
 </view>

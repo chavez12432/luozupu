@@ -130,6 +130,18 @@ const routes = [
         meta: { title: '学历榜' }
       },
       {
+        path: 'fengtu',
+        name: 'Fengtu',
+        component: () => import('../views/fengtu/List.vue'),
+        meta: { title: '风土志' }
+      },
+      {
+        path: 'fengtu/form',
+        name: 'FengtuForm',
+        component: () => import('../views/fengtu/Form.vue'),
+        meta: { title: '风土志表单' }
+      },
+      {
         path: 'accounts',
         name: 'Accounts',
         component: () => import('../views/ops/Accounts.vue'),

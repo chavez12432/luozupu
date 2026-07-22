@@ -144,34 +144,52 @@ function buildPedigreeLayout(members, branch, options = {}) {
     .sort((a, b) => a.generation - b.generation || compareMemberKey(a, b));
   const orderedRoots = primaryRoots.concat(brokenRoots);
 
-  function leafCount(node, memo) {
+  function leafCount(node, memo, visiting) {
     if (memo[node.id] != null) return memo[node.id];
-    const kids = node.children.map(cid => nodeMap[cid]).filter(Boolean);
-    if (!kids.length) {
+    if (visiting && visiting[node.id]) {
       memo[node.id] = 1;
       return 1;
     }
+    const mark = visiting || Object.create(null);
+    mark[node.id] = true;
+    const kids = node.children.map(cid => nodeMap[cid]).filter(Boolean);
+    if (!kids.length) {
+      memo[node.id] = 1;
+      delete mark[node.id];
+      return 1;
+    }
     let sum = 0;
-    kids.forEach(k => { sum += leafCount(k, memo); });
+    kids.forEach(k => { sum += leafCount(k, memo, mark); });
     memo[node.id] = Math.max(1, sum);
+    delete mark[node.id];
     return memo[node.id];
   }
 
-  function place(node, leftSlot, memo) {
-    const kids = node.children.map(cid => nodeMap[cid]).filter(Boolean);
-    if (!kids.length) {
+  function place(node, leftSlot, memo, visiting) {
+    if (visiting && visiting[node.id]) {
       node.x = leftSlot + 0.5;
       node.subtreeLeft = leftSlot;
       node.subtreeRight = leftSlot + 1;
       return leftSlot + 1;
     }
+    const mark = visiting || Object.create(null);
+    mark[node.id] = true;
+    const kids = node.children.map(cid => nodeMap[cid]).filter(Boolean);
+    if (!kids.length) {
+      node.x = leftSlot + 0.5;
+      node.subtreeLeft = leftSlot;
+      node.subtreeRight = leftSlot + 1;
+      delete mark[node.id];
+      return leftSlot + 1;
+    }
     let cursor = leftSlot;
     kids.forEach(k => {
-      cursor = place(k, cursor, memo);
+      cursor = place(k, cursor, memo, mark);
     });
     node.subtreeLeft = leftSlot;
     node.subtreeRight = cursor;
     node.x = (kids[0].x + kids[kids.length - 1].x) / 2;
+    delete mark[node.id];
     return cursor;
   }
 

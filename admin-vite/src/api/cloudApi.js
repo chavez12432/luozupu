@@ -452,6 +452,27 @@ export const sagesApi = {
 };
 
 /**
+ * 风土志 API
+ */
+export const fengtuApi = {
+  async getList(params = {}) {
+    return await callCloudFunctionHTTP('adminApi', { action: 'listFengtu', ...params });
+  },
+  async getById(id) {
+    return await callCloudFunctionHTTP('adminApi', { action: 'getFengtu', data: { _id: id } });
+  },
+  async create(data) {
+    return await callCloudFunctionHTTP('adminApi', { action: 'createFengtu', data });
+  },
+  async update(id, data) {
+    return await callCloudFunctionHTTP('adminApi', { action: 'updateFengtu', data: { _id: id, ...data } });
+  },
+  async delete(id) {
+    return await callCloudFunctionHTTP('adminApi', { action: 'deleteFengtu', data: { _id: id } });
+  }
+};
+
+/**
  * 群英 API
  */
 export const spouseRepairApi = {

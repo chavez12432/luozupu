@@ -203,9 +203,25 @@ function isModernMember(member) {
   if (['宋', '元', '明', '清'].some(d => dynasty === d || dynasty.includes(d))) {
     return false;
   }
-  // 无出生年：代数较大者偏现代，否则古代
+  // 展示层：代数较大者偏现代；认证请用 authApi/memberEra 的严格版
   const gen = member && member.generation;
   if (gen != null && Number(gen) >= 30) return true;
+  return false;
+}
+
+/** 身份验证专用：未知不放行（禁止世代启发式） */
+function isVerifiableModernMember(member) {
+  if (!member) return false;
+  if (member.eraCategory === 'ancient') return false;
+  if (member.eraCategory === 'modern') return true;
+  const year = getBirthYear(member);
+  if (year != null && !Number.isNaN(year)) {
+    return year >= MODERN_FROM_YEAR;
+  }
+  const dynasty = (member.birthDate && member.birthDate.dynasty) || '';
+  if (dynasty.includes('民国') || dynasty.includes('中华人民共和国') || dynasty.includes('共和国')) {
+    return true;
+  }
   return false;
 }
 
@@ -675,6 +691,7 @@ module.exports = {
   MODERN_FROM_YEAR,
   getBirthYear,
   isModernMember,
+  isVerifiableModernMember,
   isAliveMember,
   hasValidDeathDate,
   enrichDateEra,

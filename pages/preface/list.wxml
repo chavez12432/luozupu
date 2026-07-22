@@ -1,13 +1,18 @@
 <view class="container">
-  <view class="header">
-    <text class="title">族谱序文</text>
-    <text class="subtitle">高洲罗氏族谱历代序跋</text>
+  <scenic-nav title="族谱序文" scene="preface"></scenic-nav>
+  <view class="header scenic-header">
+    <image class="scenic-header__bg" src="/images/headers/preface.jpg" mode="aspectFill" />
+    <view class="scenic-header__mask"></view>
+    <view class="scenic-header__body">
+      <text class="title">族谱序文</text>
+      <text class="subtitle">高洲罗氏族谱历代序跋</text>
+    </view>
   </view>
-  
+
   <view class="preface-list">
-    <view 
-      class="preface-item" 
-      wx:for="{{prefaces}}" 
+    <view
+      class="preface-item"
+      wx:for="{{prefaces}}"
       wx:key="id"
       data-id="{{item.id}}"
       bindtap="goToDetail"

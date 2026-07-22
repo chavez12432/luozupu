@@ -1,8 +1,9 @@
 {
-  "navigationBarTitleText": "宗亲验证",
+  "navigationStyle": "custom",
   "usingComponents": {
     "dev-footer": "/components/dev-footer/dev-footer",
     "logo-header": "/components/logo-header/logo-header",
-    "seal-button": "/components/seal-button/seal-button"
+    "seal-button": "/components/seal-button/seal-button",
+    "scenic-nav": "/components/scenic-nav/scenic-nav"
   }
 }

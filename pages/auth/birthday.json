@@ -1,6 +1,7 @@
 {
-  "navigationBarTitleText": "出生日期验证",
+  "navigationStyle": "custom",
   "usingComponents": {
-    "dev-footer": "/components/dev-footer/dev-footer"
+    "dev-footer": "/components/dev-footer/dev-footer",
+    "scenic-nav": "/components/scenic-nav/scenic-nav"
   }
 }

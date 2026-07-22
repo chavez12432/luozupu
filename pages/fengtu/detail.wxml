@@ -1,0 +1,97 @@
+<!--pages/fengtu/detail.wxml-->
+<view class="container">
+  <view class="header" wx:if="{{layout !== 'poem'}}">
+    <text class="title">{{title}}</text>
+    <view class="author-info" wx:if="{{authorName || year || dynasty}}">
+      <view class="info-row">
+        <view class="info-item" wx:if="{{authorName}}">
+          <text class="info-label">作者</text>
+          <text class="info-value">{{authorName}}</text>
+        </view>
+        <view class="info-item" wx:if="{{authorGeneration}}">
+          <text class="info-label">世系</text>
+          <text class="info-value">{{authorGeneration}}</text>
+        </view>
+      </view>
+      <view class="info-row">
+        <view class="info-item" wx:if="{{dynasty}}">
+          <text class="info-label">朝代</text>
+          <text class="info-value">{{dynasty}}</text>
+        </view>
+        <view class="info-item" wx:if="{{year}}">
+          <text class="info-label">公元</text>
+          <text class="info-value">{{year}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 古文三栏 -->
+  <block wx:if="{{layout === 'classic'}}">
+    <view class="tab-bar">
+      <view class="tab-item {{activeTab === 'original' ? 'active' : ''}}" data-tab="original" bindtap="switchTab">
+        <text>古文原文</text>
+      </view>
+      <view class="tab-item {{activeTab === 'translation' ? 'active' : ''}}" data-tab="translation" bindtap="switchTab">
+        <text>现代译文</text>
+      </view>
+      <view class="tab-item {{activeTab === 'notes' ? 'active' : ''}}" data-tab="notes" bindtap="switchTab">
+        <text>考评注释</text>
+      </view>
+    </view>
+    <scroll-view class="content-area" scroll-y>
+      <view class="content-section" wx:if="{{activeTab === 'original'}}">
+        <view class="section-title">原文</view>
+        <text class="original-text">{{content.original}}</text>
+      </view>
+      <view class="content-section" wx:if="{{activeTab === 'translation'}}">
+        <view class="section-title">现代文翻译</view>
+        <text class="translation-text">{{content.translation}}</text>
+      </view>
+      <view class="content-section" wx:if="{{activeTab === 'notes'}}">
+        <view class="section-title">考评与注释</view>
+        <rich-text class="notes-text" nodes="{{content.notesHtml}}"></rich-text>
+      </view>
+    </scroll-view>
+  </block>
+
+  <!-- 八景：一页一景，图配诗 -->
+  <block wx:elif="{{layout === 'poem'}}">
+    <view class="poem-top">
+      <text class="poem-book-title">{{title}}</text>
+      <text class="poem-page-hint">{{sceneIndex + 1}} / {{scenes.length}} · 左右滑动</text>
+    </view>
+    <swiper
+      class="poem-swiper"
+      current="{{sceneIndex}}"
+      bindchange="onSceneChange"
+      indicator-dots="{{true}}"
+      indicator-color="rgba(193,154,75,0.35)"
+      indicator-active-color="#C41E1E"
+    >
+      <swiper-item wx:for="{{scenes}}" wx:key="title">
+        <scroll-view class="scene-page" scroll-y>
+          <image
+            class="scene-image"
+            src="{{item.image}}"
+            mode="widthFix"
+            data-url="{{item.image}}"
+            bindtap="previewImage"
+            binderror="onImgError"
+          />
+          <view class="scene-text">
+            <text class="scene-title">{{item.title}}</text>
+            <text class="scene-poem">{{item.poem}}</text>
+          </view>
+        </scroll-view>
+      </swiper-item>
+    </swiper>
+  </block>
+
+  <!-- 普通文 -->
+  <scroll-view class="content-area" scroll-y wx:else>
+    <view class="content-section">
+      <text class="translation-text">{{body}}</text>
+    </view>
+  </scroll-view>
+</view>

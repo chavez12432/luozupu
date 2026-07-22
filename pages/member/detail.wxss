@@ -52,6 +52,14 @@
   background: var(--color-cinnabar-deep);
 }
 
+.manage-quota {
+  width: 100%;
+  font-size: 22rpx;
+  color: var(--color-ink-mute);
+  letter-spacing: 1rpx;
+  padding: 4rpx 8rpx 0;
+}
+
 .broken-alert {
   background: #FFF3E0;
   border: 2rpx solid #FF9800;

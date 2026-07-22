@@ -32,13 +32,34 @@ function formatPositions(positions) {
   }).filter(Boolean).join('、');
 }
 
+/** 按 _id / originalId / memberId 解析成员（兼容 M0390、C0242、纯数字） */
+async function resolveMemberByKey(key) {
+  if (key == null || key === '') return null;
+  const id = String(key);
+  try {
+    const byDoc = await db.collection('members').doc(id).get();
+    if (byDoc && byDoc.data) {
+      return Object.assign({ _id: id }, byDoc.data);
+    }
+  } catch (_) { /* continue */ }
+
+  const tries = [{ originalId: id }, { memberId: id }];
+  if (/^\d+$/.test(id)) tries.unshift({ originalId: Number(id) });
+  for (const where of tries) {
+    try {
+      const { data } = await db.collection('members').where(where).limit(1).get();
+      if (data && data[0]) {
+        const row = data[0];
+        if (!row._id) row._id = row._id;
+        return row;
+      }
+    } catch (_) { /* continue */ }
+  }
+  return null;
+}
+
 async function resolveFatherRecord(fatherMemberId) {
-  if (!fatherMemberId) return null;
-  const { data: fathers } = await db.collection('members')
-    .where({ originalId: Number(fatherMemberId) || fatherMemberId })
-    .limit(1)
-    .get();
-  return fathers && fathers[0] ? fathers[0] : null;
+  return resolveMemberByKey(fatherMemberId);
 }
 
 async function resolveMotherDisplay(member, fatherMemberId, motherMemberId) {
@@ -48,14 +69,11 @@ async function resolveMotherDisplay(member, fatherMemberId, motherMemberId) {
 
   if (motherMemberId && !badMotherId) {
     try {
-      const { data: mothers } = await db.collection('members')
-        .where({ originalId: Number(motherMemberId) || motherMemberId })
-        .limit(1)
-        .get();
-      if (mothers && mothers[0] && mothers[0].name !== member.fatherName) {
+      const mother = await resolveMemberByKey(motherMemberId);
+      if (mother && mother.name !== member.fatherName) {
         return {
-          _id: mothers[0]._id,
-          name: mothers[0].name,
+          _id: mother._id || '',
+          name: mother.name || '',
           wifeId: ''
         };
       }
@@ -135,18 +153,13 @@ exports.main = async (event, context) => {
     let motherInfo = { _id: '', name: '' };
     let spouseInfo = { _id: '', name: '' };
     
-    // 查询父亲信息（使用 originalId 查询）
+    // 查询父亲信息（兼容 originalId / memberId / 云 _id）
     if (isPublic && fatherMemberId) {
       try {
-        const { data: father } = await db.collection('members')
-          .where({
-            originalId: Number(fatherMemberId) || fatherMemberId
-          })
-          .get();
-        if (father && father.length > 0) {
-          fatherInfo = { _id: father[0]._id, name: father[0].name };
+        const father = await resolveMemberByKey(fatherMemberId);
+        if (father) {
+          fatherInfo = { _id: father._id || '', name: father.name || '' };
         } else {
-          // 如果找不到，用 fatherName
           fatherInfo = { _id: '', name: member.fatherName || '' };
         }
       } catch (e) {
@@ -293,45 +306,51 @@ exports.main = async (event, context) => {
       }
     }
     
-    // 查询子女信息（通过 fatherId 或 motherId 匹配 originalId）
+    // 查询子女信息（fatherId/motherId 可能是 originalId、memberId 或云 _id）
     member.children = [];
     if (isPublic) {
       try {
-        // 获取当前成员的 originalId（用于匹配 fatherId/motherId）
-        const memberOriginalId = member.originalId || (member.memberId ? member.memberId.replace(/^M0+/, '') : '');
-        
-        // 查找以该成员的 originalId 为 fatherId 的记录
-        const { data: childrenAsFather } = await db.collection('members')
-          .where({
-            fatherId: String(memberOriginalId)
-          })
-          .get();
-        
-        // 查找以该成员的 originalId 为 motherId 的记录
-        const { data: childrenAsMother } = await db.collection('members')
-          .where({
-            motherId: String(memberOriginalId)
-          })
-          .get();
-        
-        // 合并子女列表
-        const allChildren = [...(childrenAsFather || []), ...(childrenAsMother || [])];
-        
-        // 去重（避免同时是父母的情况）
+        const idKeys = [
+          member.originalId,
+          member.memberId,
+          member._id
+        ]
+          .filter((v) => v != null && String(v) !== '')
+          .map(String);
+        const uniqKeys = [...new Set(idKeys)];
+        const allChildren = [];
+        for (const key of uniqKeys) {
+          const [asFather, asMother] = await Promise.all([
+            db.collection('members').where({ fatherId: key }).limit(100).get()
+              .catch(() => ({ data: [] })),
+            db.collection('members').where({ motherId: key }).limit(100).get()
+              .catch(() => ({ data: [] }))
+          ]);
+          allChildren.push(...(asFather.data || []), ...(asMother.data || []));
+        }
+        // 兼容历史数字 originalId（无前缀）
+        const rawNum = String(member.originalId || '').replace(/^[A-Za-z]+0*/, '');
+        if (rawNum && /^\d+$/.test(rawNum) && !uniqKeys.includes(rawNum)) {
+          const [asFather, asMother] = await Promise.all([
+            db.collection('members').where({ fatherId: rawNum }).limit(100).get()
+              .catch(() => ({ data: [] })),
+            db.collection('members').where({ motherId: rawNum }).limit(100).get()
+              .catch(() => ({ data: [] }))
+          ]);
+          allChildren.push(...(asFather.data || []), ...(asMother.data || []));
+        }
+
         const seenIds = new Set();
         member.children = allChildren.filter(child => {
-          if (seenIds.has(child._id)) return false;
+          if (!child || !child._id || seenIds.has(child._id)) return false;
           seenIds.add(child._id);
           return true;
         }).map(child => {
-          // 计算出生年份用于排序
           let birthYear = 9999;
           if (child.birthDate) {
-            // 优先使用公历年份
             if (child.birthDate.gregorian && child.birthDate.gregorian.year) {
               birthYear = child.birthDate.gregorian.year;
             } else if (child.birthDate.lunar && child.birthDate.lunar.year) {
-              // 农历年份减去1得到大概的公历年份
               birthYear = child.birthDate.lunar.year;
             }
           }
@@ -343,12 +362,10 @@ exports.main = async (event, context) => {
             birthYear: birthYear
           };
         });
-        
-        // 按出生年份排序（年份小的在前 = 年龄大的在前）
+
         member.children.sort((a, b) => {
-          // 无出生年份的排到最后
           if (a.birthYear === 9999 && b.birthYear === 9999) {
-            return a.generation - b.generation;
+            return (a.generation || 0) - (b.generation || 0);
           }
           if (a.birthYear === 9999) return 1;
           if (b.birthYear === 9999) return -1;
@@ -360,9 +377,9 @@ exports.main = async (event, context) => {
       }
     }
     
-    // 更新成员数据（勿清空已解析的 spouseName）
-    member.fatherId = fatherInfo._id;
-    member.fatherName = fatherInfo._id ? (fatherInfo.name || '') : '';
+    // 更新成员数据：解析失败时保留库内父亲名，勿清空
+    member.fatherId = fatherInfo._id || member.fatherId || '';
+    member.fatherName = fatherInfo.name || member.fatherName || '';
     member.motherId = motherInfo._id || '';
     member.motherWifeId = motherInfo.wifeId || '';
     member.motherName = (member.motherWifeId || member.motherId)

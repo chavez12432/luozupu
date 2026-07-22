@@ -71,6 +71,11 @@
             <span>学历榜</span>
           </el-menu-item>
         </el-sub-menu>
+
+        <el-menu-item index="/fengtu">
+          <el-icon><Notebook /></el-icon>
+          <span>风土志</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     
@@ -106,7 +111,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user.js'
-import { Collection, DataLine, User, UserFilled, Avatar, Trophy, Star, Medal, Reading, ArrowDown, Monitor, Key, ChatDotRound } from '@element-plus/icons-vue'
+import { Collection, DataLine, User, UserFilled, Avatar, Trophy, Star, Medal, Reading, ArrowDown, Monitor, Key, ChatDotRound, Notebook } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
